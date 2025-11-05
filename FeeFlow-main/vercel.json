@@ -1,0 +1,12 @@
+{
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "NEXT_PUBLIC_SPREADSHEET_ID": "1WHkw5YaVbnHjWD2nwTcYnQfIYV7PxascjEzY7FqL4Ew",
+    "USE_GOOGLE_SHEETS": "true",
+    "FORCE_GOOGLE_SHEETS": "true"
+  }
+}

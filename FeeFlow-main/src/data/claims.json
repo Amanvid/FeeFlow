@@ -1,0 +1,58 @@
+[
+  {
+    "invoiceNumber": "TEST-1762367992496",
+    "guardianName": "Test Guardian",
+    "guardianPhone": "241234567",
+    "relationship": "Parent",
+    "studentName": "Test Student",
+    "class": "Grade 10",
+    "totalFeesBalance": 500,
+    "dueDate": "2024-12-31",
+    "timestamp": "05/11/2025",
+    "paid": false,
+    "paymentDate": null,
+    "paymentReference": null
+  },
+  {
+    "invoiceNumber": "TEST-1762368020374",
+    "guardianName": "Test Guardian",
+    "guardianPhone": "241234567",
+    "relationship": "Parent",
+    "studentName": "Test Student",
+    "class": "Grade 10",
+    "totalFeesBalance": 500,
+    "dueDate": "2024-12-31",
+    "timestamp": "05/11/2025",
+    "paid": false,
+    "paymentDate": null,
+    "paymentReference": null
+  },
+  {
+    "invoiceNumber": "CEC-INV--0001",
+    "guardianName": "Joe Benner",
+    "guardianPhone": "536282694",
+    "relationship": "Father",
+    "studentName": "Fuastina",
+    "class": "Creche",
+    "totalFeesBalance": 700,
+    "dueDate": "7 Nov. 2025",
+    "timestamp": "05/11/2025",
+    "paid": false,
+    "paymentDate": null,
+    "paymentReference": null
+  },
+  {
+    "invoiceNumber": "TEST-1762367992497",
+    "guardianName": "Test Guardian 2",
+    "guardianPhone": "241234568",
+    "relationship": "Parent",
+    "studentName": "Test Student 2",
+    "class": "Grade 11",
+    "totalFeesBalance": 750,
+    "dueDate": "2024-12-31",
+    "timestamp": "05/11/2025",
+    "paid": false,
+    "paymentDate": null,
+    "paymentReference": null
+  }
+]
