@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     };
 
     // Append to Google Sheets instead of file system
-    const result = await googleSheets.appendToSheet('Invoices', [[
+    const result = await googleSheets.appendToSheet('Claims', [[
       newInvoice.id,
       newInvoice.amount,
       newInvoice.description,

@@ -15,7 +15,19 @@ export class GoogleSheetsService {
     }
 
     // ✅ FIXED: Properly format private key for both local and Vercel
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
+    let privateKey = process.env.GOOGLE_PRIVATE_KEY;
+    
+    // Handle different private key formats
+    if (privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+      // Already properly formatted
+      privateKey = privateKey.replace(/\\n/g, '\n');
+    } else {
+      // Try to fix common formatting issues
+      privateKey = privateKey
+        .replace(/\\n/g, '\n')
+        .replace(/-----BEGIN PRIVATE KEY-----\s*/, '-----BEGIN PRIVATE KEY-----\n')
+        .replace(/\s*-----END PRIVATE KEY-----/, '\n-----END PRIVATE KEY-----\n');
+    }
 
     this.auth = new google.auth.JWT({
       email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -33,7 +45,7 @@ export class GoogleSheetsService {
     try {
       const response = await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A1`, // Start from first row
+        range: sheetName, // Just the sheet name for append operations
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: values,
@@ -319,11 +331,11 @@ export class GoogleSheetsService {
   }
 
   /**
-   * Get all invoices from Invoices sheet
+   * Get all invoices from Claims sheet
    */
   async getInvoices(): Promise<{ success: boolean; data: any[]; message: string }> {
     try {
-      const result = await this.getSheetData('Invoices');
+      const result = await this.getSheetData('Claims');
       if (!result.success) {
         return { success: false, data: [], message: result.message };
       }
@@ -356,7 +368,7 @@ export class GoogleSheetsService {
   async updateInvoice(invoiceId: string, invoiceData: any): Promise<{ success: boolean; message: string }> {
     try {
       // Get current invoices data
-      const result = await this.getSheetData('Invoices');
+      const result = await this.getSheetData('Claims');
       if (!result.success) {
         return { success: false, message: result.message };
       }
@@ -395,7 +407,7 @@ export class GoogleSheetsService {
         invoiceData.customerEmail || currentRow[9] || '',
       ];
 
-      return await this.updateSheet('Invoices', `A${rowIndex}:J${rowIndex}`, [updatedRow]);
+      return await this.updateSheet('Claims', `A${rowIndex}:J${rowIndex}`, [updatedRow]);
     } catch (error) {
       console.error('Error updating invoice:', error);
       return { success: false, message: `Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}` };
