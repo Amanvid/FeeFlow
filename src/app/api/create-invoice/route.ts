@@ -2,22 +2,10 @@
 import { NextResponse } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Invoice } from '@/types';
-import fs from 'fs/promises';
-import path from 'path';
+import { GoogleSheetsService } from '@/lib/google-sheets';
 
-const INVOICES_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'invoices.json');
-
-async function readInvoicesFile(): Promise<Invoice[]> {
-  try {
-    await fs.access(INVOICES_FILE_PATH);
-  } catch (error) {
-    await fs.writeFile(INVOICES_FILE_PATH, JSON.stringify([], null, 2));
-    return [];
-  }
-
-  const fileContent = await fs.readFile(INVOICES_FILE_PATH, 'utf-8');
-  return fileContent ? JSON.parse(fileContent) : [];
-}
+// Initialize Google Sheets service
+const googleSheets = new GoogleSheetsService();
 
 export async function POST(req: Request) {
   try {
@@ -37,9 +25,24 @@ export async function POST(req: Request) {
       updatedAt: new Date().toISOString(),
     };
 
-    const invoices = await readInvoicesFile();
-    invoices.push(newInvoice);
-    await fs.writeFile(INVOICES_FILE_PATH, JSON.stringify(invoices, null, 2));
+    // Append to Google Sheets instead of file system
+    const result = await googleSheets.appendToSheet('Invoices', [[
+      newInvoice.id,
+      newInvoice.amount,
+      newInvoice.description,
+      newInvoice.reference,
+      newInvoice.status,
+      newInvoice.createdAt,
+      newInvoice.updatedAt,
+    ]]);
+
+    if (!result.success) {
+      console.error('Failed to append to Google Sheets:', result.message);
+      return NextResponse.json({ 
+        error: 'Failed to create invoice', 
+        details: result.message 
+      }, { status: 500 });
+    }
 
     return NextResponse.json(newInvoice);
   } catch (error) {

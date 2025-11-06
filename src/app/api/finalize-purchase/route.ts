@@ -1,28 +1,41 @@
 
 import { NextResponse } from 'next/server';
 import type { Invoice } from '@/types';
-import fs from 'fs/promises';
-import path from 'path';
 import { verifyOtp } from '@/lib/actions'; 
 import { getSchoolConfig, getStudentById, getAllClaims, getAllStudents } from '@/lib/data';
 import type { PhoneClaim, Student } from '@/lib/definitions';
 import { sendSms } from '@/lib/actions';
 import { googleSheetsService } from '@/lib/google-sheets';
 
-const INVOICES_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'invoices.json');
+// Google Sheets service for invoice operations
+const googleSheets = new GoogleSheetsService();
 
-async function readInvoicesFile(): Promise<Invoice[]> {
+// Helper function to get invoices from Google Sheets
+async function getInvoicesFromSheet(): Promise<Invoice[]> {
   try {
-    await fs.access(INVOICES_FILE_PATH);
-    const fileContent = await fs.readFile(INVOICES_FILE_PATH, 'utf-8');
-    return fileContent ? JSON.parse(fileContent) : [];
+    const result = await googleSheets.getInvoices();
+    if (!result.success) {
+      console.error('Failed to get invoices from sheet:', result.message);
+      return [];
+    }
+    
+    // Convert the data to Invoice objects
+    return result.data.map((invoice: any) => ({
+      id: invoice.id || '',
+      amount: parseFloat(invoice.amount) || 0,
+      status: invoice.status || 'PENDING',
+      createdAt: invoice.createdat || new Date().toISOString(),
+      updatedAt: invoice.updatedat || new Date().toISOString(),
+      description: invoice.description || '',
+      currency: invoice.currency || 'GHS',
+      customerName: invoice.customername || '',
+      customerPhone: invoice.customerphone || '',
+      customerEmail: invoice.customeremail || '',
+    }));
   } catch (error) {
+    console.error('Error getting invoices from sheet:', error);
     return [];
   }
-}
-
-async function writeInvoicesFile(invoices: Invoice[]) {
-  await fs.writeFile(INVOICES_FILE_PATH, JSON.stringify(invoices, null, 2));
 }
 
 export async function POST(req: Request) {
@@ -48,7 +61,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid activation code.' }, { status: 401 });
     }
 
-    const invoices = await readInvoicesFile();
+    // Get invoice from Google Sheets
+    const invoices = await getInvoicesFromSheet();
     const invoiceIndex = invoices.findIndex(inv => inv.id === invoiceId);
 
     if (invoiceIndex === -1) {
@@ -61,7 +75,12 @@ export async function POST(req: Request) {
     }
     currentInvoice.status = 'PAID';
     currentInvoice.updatedAt = new Date().toISOString();
-    await writeInvoicesFile(invoices);
+    
+    // Update invoice in Google Sheets
+    const updateResult = await googleSheets.updateInvoice(invoiceId, currentInvoice);
+    if (!updateResult.success) {
+      return NextResponse.json({ error: 'Failed to update invoice status' }, { status: 500 });
+    }
     
     // Get all data needed for Google Sheets update and SMS
     const allClaims = await getAllClaims();

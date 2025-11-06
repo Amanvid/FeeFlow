@@ -317,6 +317,90 @@ export class GoogleSheetsService {
       return { success: false, message: `Error clearing sheet: ${error instanceof Error ? error.message : 'Unknown error'}` };
     }
   }
+
+  /**
+   * Get all invoices from Invoices sheet
+   */
+  async getInvoices(): Promise<{ success: boolean; data: any[]; message: string }> {
+    try {
+      const result = await this.getSheetData('Invoices');
+      if (!result.success) {
+        return { success: false, data: [], message: result.message };
+      }
+
+      const rows = result.data;
+      if (rows.length === 0) {
+        return { success: true, data: [], message: 'No invoices found' };
+      }
+
+      // Convert rows to invoice objects (assuming header row exists)
+      const headers = rows[0];
+      const invoices = rows.slice(1).map(row => {
+        const invoice: any = {};
+        headers.forEach((header: string, index: number) => {
+          invoice[header.toLowerCase().replace(/\s+/g, '')] = row[index] || '';
+        });
+        return invoice;
+      });
+
+      return { success: true, data: invoices, message: 'Invoices retrieved successfully' };
+    } catch (error) {
+      console.error('Error getting invoices:', error);
+      return { success: false, data: [], message: `Failed to get invoices: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    }
+  }
+
+  /**
+   * Update an individual invoice in Invoices sheet
+   */
+  async updateInvoice(invoiceId: string, invoiceData: any): Promise<{ success: boolean; message: string }> {
+    try {
+      // Get current invoices data
+      const result = await this.getSheetData('Invoices');
+      if (!result.success) {
+        return { success: false, message: result.message };
+      }
+
+      const rows = result.data;
+      if (rows.length === 0) {
+        return { success: false, message: 'No invoices found' };
+      }
+
+      // Find the invoice row by ID
+      let rowIndex = -1;
+      for (let i = 1; i < rows.length; i++) { // Start from 1 to skip header
+        if (rows[i][0] === invoiceId) { // Assuming ID is in first column
+          rowIndex = i + 1; // +1 because Sheets is 1-indexed
+          break;
+        }
+      }
+
+      if (rowIndex === -1) {
+        return { success: false, message: `Invoice ${invoiceId} not found` };
+      }
+
+      // Update the invoice row with new data
+      // Assuming columns: ID, Amount, Status, CreatedAt, UpdatedAt, Description, etc.
+      const currentRow = rows[rowIndex - 1]; // -1 because we need 0-indexed for the array
+      const updatedRow = [
+        invoiceData.id || currentRow[0] || '',
+        invoiceData.amount || currentRow[1] || '',
+        invoiceData.status || currentRow[2] || '',
+        invoiceData.createdAt || currentRow[3] || '',
+        invoiceData.updatedAt || new Date().toISOString(),
+        invoiceData.description || currentRow[5] || '',
+        invoiceData.currency || currentRow[6] || 'GHS',
+        invoiceData.customerName || currentRow[7] || '',
+        invoiceData.customerPhone || currentRow[8] || '',
+        invoiceData.customerEmail || currentRow[9] || '',
+      ];
+
+      return await this.updateSheet('Invoices', `A${rowIndex}:J${rowIndex}`, [updatedRow]);
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      return { success: false, message: `Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    }
+  }
 }
 
 
