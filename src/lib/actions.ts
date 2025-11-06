@@ -7,8 +7,8 @@ import type { Student } from './definitions';
 
 const FROG_API_BASE_URL = "https://frogapi.wigal.com.gh/api/v3";
 const OTP_SENDER_ID = "FeeFlow";
-const API_KEY = "$2y$10$6oYYcjc6Ge3/W.P.1Yqk6eHBs0ERVFR6IaBQ2qpYGBnMYp28B3uPe";
-const USERNAME = "amanvid";
+const API_KEY = process.env.FROG_API_KEY || "$2y$10$6oYYcjc6Ge3/W.P.1Yqk6eHBs0ERVFR6IaBQ2qpYGBnMYp28B3uPe";
+const USERNAME = process.env.FROG_USERNAME || "amanvid";
 
 export async function generateOtp(phone: string): Promise<{ success: boolean; message: string }> {
   console.log(`Generating OTP for ${phone}`);
