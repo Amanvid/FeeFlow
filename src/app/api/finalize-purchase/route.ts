@@ -8,7 +8,7 @@ import { sendSms } from '@/lib/actions';
 import { googleSheetsService } from '@/lib/google-sheets';
 
 // Google Sheets service for invoice operations
-const googleSheets = new GoogleSheetsService();
+const googleSheets = googleSheetsService;
 
 // Helper function to get invoices from Google Sheets
 async function getInvoicesFromSheet(): Promise<Invoice[]> {
@@ -27,10 +27,7 @@ async function getInvoicesFromSheet(): Promise<Invoice[]> {
       createdAt: invoice.createdat || new Date().toISOString(),
       updatedAt: invoice.updatedat || new Date().toISOString(),
       description: invoice.description || '',
-      currency: invoice.currency || 'GHS',
-      customerName: invoice.customername || '',
-      customerPhone: invoice.customerphone || '',
-      customerEmail: invoice.customeremail || '',
+      reference: invoice.reference || invoice.id || '',
     }));
   } catch (error) {
     console.error('Error getting invoices from sheet:', error);

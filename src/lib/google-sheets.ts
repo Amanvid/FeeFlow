@@ -335,7 +335,7 @@ export class GoogleSheetsService {
 
       // Convert rows to invoice objects (assuming header row exists)
       const headers = rows[0];
-      const invoices = rows.slice(1).map(row => {
+      const invoices = rows.slice(1).map((row: string[]) => {
         const invoice: any = {};
         headers.forEach((header: string, index: number) => {
           invoice[header.toLowerCase().replace(/\s+/g, '')] = row[index] || '';
