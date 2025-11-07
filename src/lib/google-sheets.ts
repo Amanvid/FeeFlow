@@ -465,12 +465,35 @@ export class GoogleSheetsService {
       // Convert Claims sheet data to invoice objects
       // Claims sheet structure: Invoice Number, Guardian Name, Guardian Phone, Relationship, Student Name, Class, Total Fees Balance, Due Date, Timestamp, Paid, Payment Date, Payment Reference
       const invoices = rows.slice(1).map((row: string[]) => {
+        // Helper function to safely parse dates from Google Sheets
+        const safeParseDate = (dateStr: string): string => {
+          if (!dateStr || dateStr.trim() === '') {
+            return new Date().toISOString();
+          }
+          
+          try {
+            // Try to parse the date - Google Sheets might have various formats
+            const date = new Date(dateStr);
+            
+            // Check if the date is valid
+            if (isNaN(date.getTime())) {
+              console.warn(`Invalid date format in sheet: "${dateStr}", using current time`);
+              return new Date().toISOString();
+            }
+            
+            return date.toISOString();
+          } catch (error) {
+            console.warn(`Error parsing date "${dateStr}": ${error}, using current time`);
+            return new Date().toISOString();
+          }
+        };
+        
         return {
           id: row[0] || '', // Invoice Number
           amount: parseFloat(row[6]) || 0, // Total Fees Balance
           status: row[9] && (row[9].toLowerCase() === 'true' || row[9] === 'TRUE') ? 'PAID' : 'PENDING', // Paid column - handle both string and boolean
-          createdAt: row[8] ? new Date(row[8]).toISOString() : new Date().toISOString(), // Timestamp - convert to ISO
-          updatedAt: row[10] ? new Date(row[10]).toISOString() : new Date().toISOString(), // Payment Date or current time - convert to ISO
+          createdAt: safeParseDate(row[8]), // Timestamp - safely parse date
+          updatedAt: safeParseDate(row[10]), // Payment Date - safely parse date
           description: `Fee payment for ${row[4]} (${row[5]})`, // Student Name and Class
           reference: row[11] || row[0] || '', // Payment Reference or Invoice Number
           // Additional fields from Claims sheet

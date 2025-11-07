@@ -19,8 +19,8 @@ async function getInvoicesFromSheet(): Promise<Invoice[]> {
       id: invoice.id || '',
       amount: parseFloat(invoice.amount) || 0,
       status: invoice.status || 'PENDING',
-      createdAt: invoice.createdat || new Date().toISOString(),
-      updatedAt: invoice.updatedat || new Date().toISOString(),
+      createdAt: invoice.createdAt || new Date().toISOString(),
+      updatedAt: invoice.updatedAt || new Date().toISOString(),
       description: invoice.description || '',
       reference: invoice.reference || invoice.id || '',
     }));
