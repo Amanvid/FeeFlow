@@ -9,6 +9,7 @@ import {
   PanelLeft,
   Users,
   Settings,
+  FileText,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -117,6 +118,21 @@ export default function AdminLayout({
               </TooltipTrigger>
               <TooltipContent side="right">Settings</TooltipContent>
             </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/admin/print-notices"
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8",
+                    pathname === "/admin/print-notices" && "bg-accent text-accent-foreground"
+                  )}
+                >
+                  <FileText className="h-5 w-5" />
+                  <span className="sr-only">Print Notices</span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Print Notices</TooltipContent>
+            </Tooltip>
           </nav>
           <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
             <Tooltip>
@@ -184,6 +200,16 @@ export default function AdminLayout({
                   <Settings className="h-5 w-5" />
                   Settings
                 </Link>
+                <Link
+                  href="/admin/print-notices"
+                  className={cn(
+                    "flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground",
+                    pathname === "/admin/print-notices" && "text-foreground"
+                  )}
+                >
+                  <FileText className="h-5 w-5" />
+                  Print Notices
+                </Link>
               </nav>
             </SheetContent>
           </Sheet>
@@ -191,6 +217,7 @@ export default function AdminLayout({
              {pathname === '/admin' && 'Dashboard'}
              {pathname === '/admin/students' && 'Students'}
              {pathname === '/admin/settings' && 'Settings'}
+             {pathname === '/admin/print-notices' && 'Print Notices'}
            </h1>
           <div className="relative ml-auto flex-1 md:grow-0">
              {/* Can add a search bar here later */}
