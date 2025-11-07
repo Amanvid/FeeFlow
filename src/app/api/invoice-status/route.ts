@@ -14,16 +14,8 @@ async function getInvoicesFromSheet(): Promise<Invoice[]> {
       return [];
     }
     
-    // Convert the data to Invoice objects
-    return result.data.map((invoice: any) => ({
-      id: invoice.id || '',
-      amount: parseFloat(invoice.amount) || 0,
-      status: invoice.status || 'PENDING',
-      createdAt: invoice.createdAt || new Date().toISOString(),
-      updatedAt: invoice.updatedAt || new Date().toISOString(),
-      description: invoice.description || '',
-      reference: invoice.reference || invoice.id || '',
-    }));
+    // Return the already properly mapped invoices from getInvoices()
+    return result.data;
   } catch (error) {
     console.error('Error getting invoices from sheet:', error);
     return [];

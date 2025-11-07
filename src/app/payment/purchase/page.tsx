@@ -83,6 +83,11 @@ function PurchaseContent() {
             const classShortHand = studentClass?.replace(/\s/g, '').toUpperCase() || 'CLS';
             const referenceId = `${studentFirstName}-${classShortHand}`;
 
+            // Get guardian information from URL parameters or use defaults
+            const guardianName = searchParams.get('guardianName') || 'Unknown Guardian';
+            const guardianPhone = phoneNumber || userPhoneFromUrl || '0536282694';
+            const relationship = searchParams.get('relationship') || 'Parent';
+
             const res = await fetch('/api/create-invoice', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -90,6 +95,12 @@ function PurchaseContent() {
                     amount: totalAmount,
                     description: `Paying the fee for ${bundleName}`,
                     reference: referenceId,
+                    guardianName: guardianName,
+                    guardianPhone: guardianPhone,
+                    relationship: relationship,
+                    studentName: studentName || 'Unknown Student',
+                    class: studentClass || 'Unknown Class',
+                    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                 }),
             });
             if (!res.ok) throw new Error('Could not initiate payment.');

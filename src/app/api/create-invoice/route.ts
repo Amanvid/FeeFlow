@@ -9,14 +9,24 @@ const googleSheets = new GoogleSheetsService();
 
 export async function POST(req: Request) {
   try {
-    const { amount, description, reference } = await req.json();
+    const { 
+      amount, 
+      description, 
+      reference,
+      guardianName,
+      guardianPhone,
+      relationship,
+      studentName,
+      class: studentClass,
+      dueDate
+    } = await req.json();
 
     if (!amount || !description || !reference) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const newInvoice: Invoice = {
-      id: uuid(),
+      id: reference, // Use reference as invoice number for consistency
       amount: parseFloat(amount),
       description,
       reference,
@@ -25,15 +35,20 @@ export async function POST(req: Request) {
       updatedAt: new Date().toISOString(),
     };
 
-    // Append to Google Sheets instead of file system
+    // Append to Google Sheets with proper Claims sheet structure
     const result = await googleSheets.appendToSheet('Claims', [[
-      newInvoice.id,
-      newInvoice.amount,
-      newInvoice.description,
-      newInvoice.reference,
-      newInvoice.status,
-      newInvoice.createdAt,
-      newInvoice.updatedAt,
+      reference, // Invoice Number (column 1)
+      guardianName || 'Unknown Guardian', // Guardian Name (column 2)
+      guardianPhone || 'Unknown Phone', // Guardian Phone (column 3)
+      relationship || 'Parent', // Relationship (column 4)
+      studentName || 'Unknown Student', // Student Name (column 5)
+      studentClass || 'Unknown Class', // Class (column 6)
+      amount.toString(), // Total Fees Balance (column 7)
+      dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB'), // Due Date (column 8)
+      new Date().toLocaleDateString('en-GB'), // Timestamp (column 9)
+      'FALSE', // Paid status (column 10)
+      '', // Payment Date (column 11)
+      '' // Payment Reference (column 12)
     ]]);
 
     if (!result.success) {
