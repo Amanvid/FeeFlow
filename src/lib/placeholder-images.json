@@ -3,13 +3,13 @@
     {
       "id": "school-logo",
       "description": "School logo for Chariot Educational Complex",
-      "imageUrl": "/logocec.png",
+      "imageUrl": "/cec_logo.png",
       "imageHint": "school logo"
     },
     {
       "id": "hero-image-1",
       "description": "A parent helping a child with homework, illustrating the educational context.",
-      "imageUrl": "https://images.unsplash.com/photo-1758598737529-3b326b4c8a55?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwYXJlbnQlMjBjaGlsZCUyMGVkdWNhdGlvbnxlbnwwfHx8fDE3NjE3MDE5NTZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "/image.jpg",
       "imageHint": "parent child education"
     },
     {

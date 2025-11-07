@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 
 const LoginSchema = z.object({
   username: z.string().min(1, "Username is required."),
@@ -148,8 +149,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/40">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center min-h-screen bg-muted/40 relative overflow-hidden">
+      {/* Large background logo */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-5 z-0">
+        <Image
+          src="/cec_logo.png"
+          alt="School Logo Background"
+          width={880}
+          height={880}
+          className="object-contain blur-sm"
+        />
+      </div>
+      {/* Additional subtle background pattern */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 z-0"></div>
+      <Card className="w-full max-w-md relative z-10 bg-background/95 backdrop-blur-sm">
         <CardHeader className="text-center">
             <div className="mx-auto bg-primary/10 text-primary p-3 rounded-full w-fit">
                 <ShieldCheck className="w-8 h-8" />

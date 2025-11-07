@@ -54,5 +54,60 @@
     "paid": false,
     "paymentDate": null,
     "paymentReference": null
+  },
+  {
+    "guardianName": "School Fees",
+    "guardianPhone": "0536282694",
+    "relationship": "Father",
+    "studentName": "Achiaa Mintah Elsie",
+    "class": "KG 1",
+    "totalFeesBalance": 320,
+    "dueDate": "7 Nov. 2025",
+    "invoiceNumber": "CEC-INV--0002",
+    "timestamp": "2025-11-06T22:41:16.335Z"
+  },
+  {
+    "guardianName": "Joe Benner",
+    "guardianPhone": "0536282694",
+    "relationship": "Father",
+    "studentName": "Bennett Manu",
+    "class": "Nursery 1",
+    "totalFeesBalance": 400,
+    "dueDate": "7 Nov. 2025",
+    "invoiceNumber": "CEC-INV--0003",
+    "timestamp": "2025-11-07T05:44:15.057Z"
+  },
+  {
+    "guardianName": "Joe Benner",
+    "guardianPhone": "0536282694",
+    "relationship": "Father",
+    "studentName": "Boateng Owusu Philip",
+    "class": "KG 2",
+    "totalFeesBalance": 400,
+    "dueDate": "7 Nov. 2025",
+    "invoiceNumber": "CEC-INV--0004",
+    "timestamp": "2025-11-07T05:54:01.288Z"
+  },
+  {
+    "guardianName": "Joe Benner",
+    "guardianPhone": "0536282694",
+    "relationship": "Father",
+    "studentName": "Acheampong Stephidela",
+    "class": "KG 1",
+    "totalFeesBalance": 820,
+    "dueDate": "7 Nov. 2025",
+    "invoiceNumber": "CEC-INV--0005",
+    "timestamp": "2025-11-07T06:00:14.931Z"
+  },
+  {
+    "guardianName": "Teacher",
+    "guardianPhone": "0536282694",
+    "relationship": "Father",
+    "studentName": "Bennett Manu",
+    "class": "Nursery 1",
+    "totalFeesBalance": 400,
+    "dueDate": "7 Nov. 2025",
+    "invoiceNumber": "CEC-INV--0006",
+    "timestamp": "2025-11-07T06:06:27.942Z"
   }
 ]

@@ -43,11 +43,16 @@ export default function FeeResult({ student, userInfo }: FeeResultProps) {
       const invoiceNumbers = claims
         .map(c => c.invoiceNumber)
         .filter(inv => inv && inv.startsWith(prefix))
-        .map(inv => parseInt(inv.replace(prefix, '').replace('-', ''), 10))
+        .map(inv => {
+          // Extract the number part from format like "CEC-INV--0001"
+          const numberPart = inv.replace(prefix, ''); // Remove prefix, leaves "--0001"
+          const cleanNumber = numberPart.replace(/^-+/, ''); // Remove leading dashes, leaves "0001"
+          return parseInt(cleanNumber, 10);
+        })
         .filter(num => !isNaN(num));
 
       const lastNumber = invoiceNumbers.length > 0 ? Math.max(...invoiceNumbers) : 0;
-      const newInvoiceNumber = `${prefix}-${padInvoiceNumber(lastNumber + 1)}`;
+      const newInvoiceNumber = `${prefix}--${padInvoiceNumber(lastNumber + 1)}`;
       setInvoiceNumber(newInvoiceNumber);
       
       setIssueDate(new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }));
@@ -134,7 +139,7 @@ export default function FeeResult({ student, userInfo }: FeeResultProps) {
           <CardContent className="p-8 sm:p-12 relative z-10">
             {config.logoUrl && (
               <div className="watermark">
-                <Image src={config.logoUrl} alt="School Logo Watermark" width={300} height={300} />
+                <Image src={config.logoUrl} alt="School Logo Watermark" width={1000} height={1000} />
               </div>
             )}
             

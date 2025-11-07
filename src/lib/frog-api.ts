@@ -5,31 +5,75 @@ import { v4 as uuid } from 'uuid';
 
 const FROG_API_BASE_URL = "https://frogapi.wigal.com.gh/api/v3";
 const SENDER_ID = "FeeFlow";
-const API_KEY = process.env.FROG_API_KEY || "$2y$10$6oYYcjc6Ge3/W.P.1Yqk6eHBs0ERVFR6IaBQ2qpYGBnMYp28B3uPe";
-const USERNAME = process.env.FROG_USERNAME || "amanvid";
+
+// Debug: Check environment variables at module load time
+console.log('=== Module Load Debug ===');
+console.log('process.env.FROG_API_KEY:', process.env.FROG_API_KEY ? 'Set' : 'Not set');
+console.log('process.env.FROG_USERNAME:', process.env.FROG_USERNAME ? 'Set' : 'Not set');
+
+// Remove fallback values - environment variables must be set
+const API_KEY = process.env.FROG_API_KEY;
+const USERNAME = process.env.FROG_USERNAME;
+
+console.log('Final API_KEY length:', API_KEY?.length || 'Not set');
+console.log('Final USERNAME:', USERNAME || 'Not set');
 
 export async function generateOtp(phone: string): Promise<{ success: boolean; message: string }> {
   console.log(`Generating OTP for ${phone}`);
+  
+  // Force reload environment variables at runtime
+  try {
+    require('dotenv').config({ path: '.env.local' });
+  } catch (e) {
+    console.log('dotenv config failed:', e);
+  }
+  
+  // Use environment variables directly at runtime to avoid caching issues
+  const apiKey = process.env.FROG_API_KEY;
+  const username = process.env.FROG_USERNAME;
+  
+  if (!apiKey || !username) {
+    console.error('Missing API credentials in generateOtp');
+    return { success: false, message: "API credentials not configured." };
+  }
+  
+  console.log('=== generateOtp Debug ===');
+  console.log('process.env.FROG_API_KEY:', process.env.FROG_API_KEY ? 'Set' : 'Not set');
+  console.log('process.env.FROG_USERNAME:', process.env.FROG_USERNAME ? 'Set' : 'Not set');
+  console.log('Using API_KEY length:', apiKey.length);
+  console.log('Using API_KEY starts with:', apiKey.substring(0, 10));
+  console.log('Using USERNAME:', username);
+  console.log('Using SENDER_ID:', SENDER_ID);
+  
+  // Add request details for debugging
+  const requestBody = {
+    number: phone,
+    expiry: 5,
+    length: 6,
+    messagetemplate: `Your ${SENDER_ID} verification code is: %OTPCODE%. It expires in %EXPIRY% minutes.`,
+    type: "NUMERIC",
+    senderid: SENDER_ID,
+  };
+  
+  console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
   try {
+    console.log('Making API call to:', `${FROG_API_BASE_URL}/sms/otp/generate`);
+    console.log('Headers:', { "API-KEY": apiKey.substring(0, 10) + '...', "USERNAME": username });
+    
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/generate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "API-KEY": API_KEY,
-        "USERNAME": USERNAME,
+        "API-KEY": apiKey,
+        "USERNAME": username,
       },
-      body: JSON.stringify({
-        number: phone,
-        expiry: 5,
-        length: 6,
-        messagetemplate: `Your ${SENDER_ID} verification code is: %OTPCODE%. It expires in %EXPIRY% minutes.`,
-        type: "NUMERIC",
-        senderid: SENDER_ID,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
+    console.log('Response status:', response.status);
     const data = await response.json();
+    console.log('Response data:', data);
 
     if (response.ok && data.status === "SUCCESS") {
       console.log(`Successfully sent OTP to ${phone}`);
@@ -47,13 +91,29 @@ export async function generateOtp(phone: string): Promise<{ success: boolean; me
 export async function verifyOtp(phone: string, otp: string): Promise<{ success: boolean; message: string }> {
   console.log(`Verifying OTP ${otp} for ${phone}`);
 
+  // Force reload environment variables at runtime
+  try {
+    require('dotenv').config({ path: '.env.local' });
+  } catch (e) {
+    console.log('dotenv config failed:', e);
+  }
+  
+  // Use environment variables directly at runtime
+  const apiKey = process.env.FROG_API_KEY;
+  const username = process.env.FROG_USERNAME;
+  
+  if (!apiKey || !username) {
+    console.error('Missing API credentials in verifyOtp');
+    return { success: false, message: "API credentials not configured." };
+  }
+
   try {
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/verify`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "API-KEY": API_KEY,
-            "USERNAME": USERNAME,
+            "API-KEY": apiKey,
+            "USERNAME": username,
         },
         body: JSON.stringify({
             otpcode: otp,
@@ -77,19 +137,35 @@ export async function verifyOtp(phone: string, otp: string): Promise<{ success: 
 }
 
 export async function generateActivationCode(phone: string): Promise<{ status: string; message: string }> {
+    // Force reload environment variables at runtime
+    try {
+      require('dotenv').config({ path: '.env.local' });
+    } catch (e) {
+      console.log('dotenv config failed:', e);
+    }
+    
+    // Use environment variables directly at runtime
+    const apiKey = process.env.FROG_API_KEY;
+    const username = process.env.FROG_USERNAME;
+    
+    if (!apiKey || !username) {
+      console.error('Missing API credentials in generateActivationCode');
+      return { status: 'FAILED', message: 'API credentials not configured.' };
+    }
+
     try {
       const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          "API-KEY": API_KEY,
-          "USERNAME": USERNAME,
+          "API-KEY": apiKey,
+          "USERNAME": username,
         },
         body: JSON.stringify({
           number: phone,
           expiry: 20, // Longer expiry for activation
           length: 8, // 8-digit code for higher security
-          messagetemplate: `Your ${SENDER_ID} activation code is: %OTPCODE%. It expires in %EXPIRY% minutes.`,
+          messagetemplate: `Your ${SENDER_ID} confirmation code is: %OTPCODE%. It expires in %EXPIRY% minutes.`,
           type: 'ALPHANUMERIC',
           senderid: SENDER_ID,
         }),
@@ -113,6 +189,22 @@ interface AdminActivationCodeParams {
 export async function generateAdminActivationCode({ adminPhone, guardianPhone, studentName, className, totalAmount }: AdminActivationCodeParams): Promise<{ success: boolean; message: string }> {
   console.log(`Generating 8-digit activation code for admin ${adminPhone}`);
    
+  // Force reload environment variables at runtime
+  try {
+    require('dotenv').config({ path: '.env.local' });
+  } catch (e) {
+    console.log('dotenv config failed:', e);
+  }
+  
+  // Use environment variables directly at runtime
+  const apiKey = process.env.FROG_API_KEY;
+  const username = process.env.FROG_USERNAME;
+  
+  if (!apiKey || !username) {
+    console.error('Missing API credentials in generateAdminActivationCode');
+    return { success: false, message: "API credentials not configured." };
+  }
+   
   const messageTemplate = `${guardianPhone} Your confirmation code for FeeFlow is: %OTPCODE%. It expires in %EXPIRY% minutes. reff. ${studentName} - ${className} (GHS ${totalAmount.toFixed(2)})`;
 
   try {
@@ -120,8 +212,8 @@ export async function generateAdminActivationCode({ adminPhone, guardianPhone, s
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "API-KEY": API_KEY,
-        "USERNAME": USERNAME,
+        "API-KEY": apiKey,
+        "USERNAME": username,
       },
       body: JSON.stringify({
         number: adminPhone,
@@ -137,10 +229,10 @@ export async function generateAdminActivationCode({ adminPhone, guardianPhone, s
 
     if (response.ok && data.status === "SUCCESS") {
       console.log(`Successfully sent detailed 8-digit code to ${adminPhone}`);
-      return { success: true, message: data.message || "An activation code has been sent to the admin." };
+      return { success: true, message: data.message || "An confirmation code has been sent to the admin." };
     } else {
-      console.error("Failed to send detailed activation code:", data);
-      return { success: false, message: data.message || "Failed to send detailed activation code." };
+      console.error("Failed to send detailed confirmation code:", data);
+      return { success: false, message: data.message || "Failed to send detailed confirmation code." };
     }
   } catch (error) {
     console.error("Error in generateAdminActivationCode:", error);

@@ -34,20 +34,44 @@ export default function Home() {
                 </Button>
               </div>
             </div>
-            <div className="flex justify-center">
+            <div className="flex justify-center relative">
               {heroImage && (
-                <Card className="rounded-2xl overflow-hidden shadow-2xl w-full max-w-md transform hover:scale-105 transition-transform duration-300">
-                  <CardContent className="p-0">
+                <div className="relative">
+                  {/* Logo positioned behind the main image - Watermark effect */}
+                  <div className="absolute -bottom-16 -right-16 w-48 h-48 opacity-10 z-0 blur-sm transform rotate-12 animate-pulse">
                     <Image
-                      src={heroImage.imageUrl}
-                      alt={heroImage.description}
-                      data-ai-hint={heroImage.imageHint}
-                      width={600}
-                      height={600}
-                      className="object-cover aspect-square"
+                      src="/cec_logo.png"
+                      alt="School Logo"
+                      width={400}
+                      height={400}
+                      className="object-contain"
                     />
-                  </CardContent>
-                </Card>
+                  </div>
+                  {/* Additional logo for better visibility - Top left */}
+                  <div className="absolute -top-12 -left-12 w-32 h-32 opacity-5 z-0 blur-sm transform -rotate-12">
+                    <Image
+                      src="/cec_logo.png"
+                      alt="School Logo"
+                      width={150}
+                      height={150}
+                      className="object-contain"
+                    />
+                  </div>
+                  {/* Subtle background pattern */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-3xl z-0"></div>
+                  <Card className="rounded-2xl overflow-hidden shadow-2xl w-full max-w-md transform hover:scale-105 transition-transform duration-300 relative z-10">
+                    <CardContent className="p-0">
+                      <Image
+                        src={heroImage.imageUrl}
+                        alt={heroImage.description}
+                        data-ai-hint={heroImage.imageHint}
+                        width={600}
+                        height={600}
+                        className="object-cover aspect-square"
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
               )}
             </div>
           </div>

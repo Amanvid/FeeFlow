@@ -1,4 +1,6 @@
 import { google } from 'googleapis';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Google Sheets service class for reading and writing data
 export class GoogleSheetsService {
@@ -6,28 +8,72 @@ export class GoogleSheetsService {
   private spreadsheetId: string;
   private auth: any;
 
-  constructor() {
-    this.spreadsheetId = process.env.GOOGLE_SHEET_ID || process.env.NEXT_PUBLIC_SPREADSHEET_ID || '';
-
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-      console.error("❌ Missing Google Sheets environment variables.");
-      throw new Error("Missing Google Sheets API credentials.");
-    }
-
-    // ✅ FIXED: Properly format private key for both local and Vercel
+  private loadPrivateKey(): string {
+    // Try to get from environment first
     let privateKey = process.env.GOOGLE_PRIVATE_KEY;
     
-    // Handle different private key formats
-    if (privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
-      // Already properly formatted
-      privateKey = privateKey.replace(/\\n/g, '\n');
-    } else {
-      // Try to fix common formatting issues
+    // If the key is too short, it might be truncated by dotenv
+    if (privateKey && privateKey.length < 100 && privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+      // Try to read from .env.local file directly
+      try {
+        const envPath = path.join(process.cwd(), '.env.local');
+        if (fs.existsSync(envPath)) {
+          const envContent = fs.readFileSync(envPath, 'utf8');
+          const lines = envContent.split('\n');
+          let reconstructedKey = '';
+          let inPrivateKey = false;
+          
+          for (const line of lines) {
+            if (line.startsWith('GOOGLE_PRIVATE_KEY=')) {
+              reconstructedKey = line.replace('GOOGLE_PRIVATE_KEY=', '');
+              inPrivateKey = true;
+            } else if (inPrivateKey && line.trim() && !line.includes('=') && !line.startsWith('#')) {
+              reconstructedKey += '\n' + line;
+            } else if (inPrivateKey && (line.includes('=') || line.startsWith('#') || line.trim() === '')) {
+              break;
+            }
+          }
+          
+          if (reconstructedKey.includes('-----END PRIVATE KEY-----')) {
+            privateKey = reconstructedKey;
+          }
+        }
+      } catch (error) {
+        console.warn('Could not read .env.local file:', error);
+      }
+    }
+    
+    // Format the key properly
+    if (privateKey && privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+      privateKey = privateKey.replace(/\\n/g, '\n').trim();
+    } else if (privateKey) {
       privateKey = privateKey
         .replace(/\\n/g, '\n')
         .replace(/-----BEGIN PRIVATE KEY-----\s*/, '-----BEGIN PRIVATE KEY-----\n')
-        .replace(/\s*-----END PRIVATE KEY-----/, '\n-----END PRIVATE KEY-----\n');
+        .replace(/\s*-----END PRIVATE KEY-----/, '\n-----END PRIVATE KEY-----\n')
+        .trim();
     }
+    
+    return privateKey || '';
+  }
+
+  constructor() {
+    this.spreadsheetId = process.env.GOOGLE_SHEET_ID || process.env.NEXT_PUBLIC_SPREADSHEET_ID || '';
+
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+      console.error("❌ Missing Google Sheets environment variables.");
+      console.error("GOOGLE_SERVICE_ACCOUNT_EMAIL:", process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
+      console.error("GOOGLE_PRIVATE_KEY exists:", !!process.env.GOOGLE_PRIVATE_KEY);
+      console.error("GOOGLE_PRIVATE_KEY length:", process.env.GOOGLE_PRIVATE_KEY?.length);
+      throw new Error("Missing Google Sheets API credentials.");
+    }
+
+    const privateKey = this.loadPrivateKey();
+    if (!privateKey) {
+      throw new Error("GOOGLE_PRIVATE_KEY is missing or empty");
+    }
+    
+    console.log("✅ Private key loaded successfully, length:", privateKey.length);
 
     this.auth = new google.auth.JWT({
       email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -232,6 +278,40 @@ export class GoogleSheetsService {
     timestamp: string;
   }) {
     try {
+      // First, check if the sheet has headers and get existing data
+      const claimsResult = await this.getSheetData('Claims');
+      let rows: any[][] = [];
+      let shouldAddHeaders = false;
+
+      if (!claimsResult.success || claimsResult.data.length === 0) {
+        // Sheet is empty or doesn't exist, we need to add headers
+        shouldAddHeaders = true;
+      } else {
+        rows = claimsResult.data;
+        // Check if first row contains headers
+        const firstRow = rows[0] || [];
+        const expectedHeaders = ['Invoice Number', 'Guardian Name', 'Guardian Phone', 'Relationship', 'Student Name', 'Class', 'Total Fees Balance', 'Due Date', 'Timestamp', 'Paid', 'Payment Date', 'Payment Reference'];
+        const hasHeaders = firstRow.length >= expectedHeaders.length && 
+          expectedHeaders.every((header, index) => 
+            firstRow[index] && firstRow[index].toString().toLowerCase().includes(header.toLowerCase().replace(' ', ''))
+          );
+        
+        if (!hasHeaders) {
+          shouldAddHeaders = true;
+        }
+      }
+
+      // Check if invoice already exists
+      let existingRowIndex = -1;
+      const startIndex = shouldAddHeaders ? 0 : 1; // Start from 0 if adding headers, 1 if headers exist
+      for (let i = startIndex; i < rows.length; i++) {
+        const row = rows[i];
+        if (row[0] === claim.invoiceNumber) {
+          existingRowIndex = i;
+          break;
+        }
+      }
+
       // Prepare the row data
       const rowData = [
         claim.invoiceNumber,
@@ -243,12 +323,49 @@ export class GoogleSheetsService {
         claim.totalFeesBalance.toString(),
         claim.dueDate,
         new Date(claim.timestamp).toLocaleDateString('en-GB'),
-        'false', // Paid status - default to false
+        'FALSE', // Paid status - default to false (uppercase for Google Sheets)
         '', // Payment date - empty initially
         '', // Payment reference - empty initially
       ];
 
-      return await this.appendToSheet('Claims', [rowData]);
+      // If headers need to be added
+      if (shouldAddHeaders) {
+        const headers = [
+          'Invoice Number',
+          'Guardian Name', 
+          'Guardian Phone',
+          'Relationship',
+          'Student Name',
+          'Class',
+          'Total Fees Balance',
+          'Due Date',
+          'Timestamp',
+          'Paid',
+          'Payment Date',
+          'Payment Reference'
+        ];
+
+        // First add the headers
+        await this.appendToSheet('Claims', [headers]);
+        
+        if (existingRowIndex >= 0) {
+          // If we found an existing row but we're adding headers, we need to update the data
+          // The existing row will now be at index + 2 (header row + 1-based indexing)
+          return await this.updateSheet('Claims', `A${existingRowIndex + 2}:L${existingRowIndex + 2}`, [rowData]);
+        } else {
+          // Add the new data row
+          return await this.appendToSheet('Claims', [rowData]);
+        }
+      } else {
+        // Headers exist
+        if (existingRowIndex >= 0) {
+          // Update existing invoice
+          return await this.updateSheet('Claims', `A${existingRowIndex + 1}:L${existingRowIndex + 1}`, [rowData]);
+        } else {
+          // Add new invoice
+          return await this.appendToSheet('Claims', [rowData]);
+        }
+      }
     } catch (error) {
       console.error('Error saving invoice to sheet:', error);
       return {
@@ -294,8 +411,8 @@ export class GoogleSheetsService {
         };
       }
 
-      // Update the payment columns (assuming columns 10, 11, 12 are Paid, Payment Date, Payment Reference)
-      const paidStatus = paymentData.paid ? 'true' : 'false';
+      // Update the payment columns (columns 10, 11, 12 are Paid, Payment Date, Payment Reference)
+      const paidStatus = paymentData.paid ? 'TRUE' : 'FALSE'; // Use uppercase for Google Sheets compatibility
       const paymentDate = paymentData.paymentDate || '';
       const paymentReference = paymentData.paymentReference || '';
 
@@ -345,14 +462,24 @@ export class GoogleSheetsService {
         return { success: true, data: [], message: 'No invoices found' };
       }
 
-      // Convert rows to invoice objects (assuming header row exists)
-      const headers = rows[0];
+      // Convert Claims sheet data to invoice objects
+      // Claims sheet structure: Invoice Number, Guardian Name, Guardian Phone, Relationship, Student Name, Class, Total Fees Balance, Due Date, Timestamp, Paid, Payment Date, Payment Reference
       const invoices = rows.slice(1).map((row: string[]) => {
-        const invoice: any = {};
-        headers.forEach((header: string, index: number) => {
-          invoice[header.toLowerCase().replace(/\s+/g, '')] = row[index] || '';
-        });
-        return invoice;
+        return {
+          id: row[0] || '', // Invoice Number
+          amount: parseFloat(row[6]) || 0, // Total Fees Balance
+          status: row[9] && (row[9].toLowerCase() === 'true' || row[9] === 'TRUE') ? 'PAID' : 'PENDING', // Paid column - handle both string and boolean
+          createdAt: row[8] ? new Date(row[8]).toISOString() : new Date().toISOString(), // Timestamp - convert to ISO
+          updatedAt: row[10] ? new Date(row[10]).toISOString() : new Date().toISOString(), // Payment Date or current time - convert to ISO
+          description: `Fee payment for ${row[4]} (${row[5]})`, // Student Name and Class
+          reference: row[11] || row[0] || '', // Payment Reference or Invoice Number
+          // Additional fields from Claims sheet
+          guardianName: row[1] || '',
+          guardianPhone: row[2] || '',
+          studentName: row[4] || '',
+          studentClass: row[5] || '',
+          dueDate: row[7] || ''
+        };
       });
 
       return { success: true, data: invoices, message: 'Invoices retrieved successfully' };
@@ -391,23 +518,25 @@ export class GoogleSheetsService {
         return { success: false, message: `Invoice ${invoiceId} not found` };
       }
 
-      // Update the invoice row with new data
-      // Assuming columns: ID, Amount, Status, CreatedAt, UpdatedAt, Description, etc.
+      // Update the invoice row with new data based on Claims sheet structure
+      // Claims sheet structure: Invoice Number, Guardian Name, Guardian Phone, Relationship, Student Name, Class, Total Fees Balance, Due Date, Timestamp, Paid, Payment Date, Payment Reference
       const currentRow = rows[rowIndex - 1]; // -1 because we need 0-indexed for the array
       const updatedRow = [
-        invoiceData.id || currentRow[0] || '',
-        invoiceData.amount || currentRow[1] || '',
-        invoiceData.status || currentRow[2] || '',
-        invoiceData.createdAt || currentRow[3] || '',
-        invoiceData.updatedAt || new Date().toISOString(),
-        invoiceData.description || currentRow[5] || '',
-        invoiceData.currency || currentRow[6] || 'GHS',
-        invoiceData.customerName || currentRow[7] || '',
-        invoiceData.customerPhone || currentRow[8] || '',
-        invoiceData.customerEmail || currentRow[9] || '',
+        invoiceData.id || currentRow[0] || '', // Invoice Number
+        currentRow[1] || '', // Guardian Name - preserve existing
+        currentRow[2] || '', // Guardian Phone - preserve existing  
+        currentRow[3] || '', // Relationship - preserve existing
+        currentRow[4] || '', // Student Name - preserve existing
+        currentRow[5] || '', // Class - preserve existing
+        invoiceData.amount?.toString() || currentRow[6] || '', // Total Fees Balance
+        currentRow[7] || '', // Due Date - preserve existing
+        currentRow[8] || '', // Timestamp - preserve existing
+        invoiceData.status === 'PAID' ? 'TRUE' : 'FALSE', // Paid - convert from status
+        invoiceData.updatedAt || currentRow[10] || '', // Payment Date
+        invoiceData.reference || currentRow[11] || '', // Payment Reference
       ];
 
-      return await this.updateSheet('Claims', `A${rowIndex}:J${rowIndex}`, [updatedRow]);
+      return await this.updateSheet('Claims', `A${rowIndex}:L${rowIndex}`, [updatedRow]);
     } catch (error) {
       console.error('Error updating invoice:', error);
       return { success: false, message: `Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}` };
