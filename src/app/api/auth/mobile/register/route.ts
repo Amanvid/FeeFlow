@@ -31,9 +31,7 @@ export async function POST(request: NextRequest) {
       profilePicture: userData.profilePicture || '',
       childPicture: userData.childPicture || '',
       role: userData.role || 'parent',
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      isActive: true
     });
 
     if (result.success && result.user) {
@@ -47,7 +45,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       return NextResponse.json(
-        { error: result.error || 'Registration failed' },
+        { error: result.message || 'Registration failed' },
         { status: 400 }
       );
     }

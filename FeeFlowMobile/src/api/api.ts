@@ -22,14 +22,13 @@ interface ApiResponse<T> {
 
 // Convert Invoice data to FeeStatus format
 const convertInvoiceToFeeStatus = (invoice: Invoice): FeeStatus => {
-  const paidAmount = invoice.amountPaid || 0;
-  const balance = invoice.totalAmount - paidAmount;
+  const totalAmount = invoice.amount;
+  const paidAmount = invoice.status === 'paid' ? totalAmount : 0;
+  const balance = totalAmount - paidAmount;
   
   let status: 'paid' | 'partial' | 'unpaid';
-  if (balance <= 0) {
+  if (invoice.status === 'paid') {
     status = 'paid';
-  } else if (paidAmount > 0) {
-    status = 'partial';
   } else {
     status = 'unpaid';
   }
@@ -37,13 +36,12 @@ const convertInvoiceToFeeStatus = (invoice: Invoice): FeeStatus => {
   return {
     studentName: invoice.studentName,
     studentId: invoice.studentId,
-    class: invoice.class,
-    term: invoice.term,
-    totalFees: invoice.totalAmount,
+    class: 'Unknown', // Default value since not in Invoice interface
+    term: 'Unknown', // Default value since not in Invoice interface
+    totalFees: totalAmount,
     paidAmount,
     balance,
     status,
-    lastPaymentDate: invoice.lastPaymentDate,
     dueDate: invoice.dueDate,
   };
 };
@@ -58,8 +56,8 @@ export const apiService = {
         // Search by both name and class
         const allInvoices = await invoiceService.getAllInvoices();
         invoices = allInvoices.filter(invoice => 
-          invoice.studentName.toLowerCase().includes(studentName.toLowerCase()) &&
-          invoice.class === studentClass
+          invoice.studentName.toLowerCase().includes(studentName.toLowerCase())
+          // Note: Invoice interface doesn't have class property, so we skip class filtering
         );
       } else if (studentName) {
         // Search by name only

@@ -23,10 +23,8 @@ export const authService = {
   // Verify OTP and login (Admin login)
   async verifyOtp(username: string, phone: string, otp: string): Promise<AuthResponse> {
     try {
-      console.log('Sending OTP verification request:', { phone, otp, username }); // Debug log
       const response = await axios.post(API_ENDPOINTS.auth.verifyOtp, { phone, otp, username });
       const responseData = response.data;
-      console.log('OTP verification response:', responseData); // Debug log
       
       // Check if the response indicates success
       if (responseData.success && responseData.user) {
@@ -41,42 +39,15 @@ export const authService = {
         // Set axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        return { 
-          success: true, 
-          message: responseData.message || 'Login successful',
-          token, 
-          user 
-        };
+        return { token, user };
       } else {
-        // Return the actual error message from the API
-        return {
-          success: false,
-          message: responseData.message || 'Login failed',
-          token: '',
-          user: null
-        };
+        throw new Error(responseData.message || 'Login failed');
       }
     } catch (error) {
-      console.error('OTP verification error:', error); // Debug log
       if (axios.isAxiosError(error)) {
-        // More detailed error handling
-        const errorMessage = error.response?.data?.message || 
-                           error.response?.statusText || 
-                           error.message || 
-                           'Invalid OTP';
-        return {
-          success: false,
-          message: errorMessage,
-          token: '',
-          user: null
-        };
+        throw new Error(error.response?.data?.message || 'Invalid OTP');
       }
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        token: '',
-        user: null
-      };
+      throw error;
     }
   },
 

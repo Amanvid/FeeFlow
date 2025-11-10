@@ -53,13 +53,16 @@ export async function generateOtp(phone: string): Promise<{ success: boolean; me
 export async function generateOtpSms(phone: string): Promise<{ success: boolean; message: string }> {
 
   try {
+    // Use type assertion to ensure TypeScript knows these are strings
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "API-KEY": API_KEY as string,
+      "USERNAME": USERNAME as string,
+    };
+    
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/generate`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "API-KEY": API_KEY,
-        "USERNAME": USERNAME,
-      },
+      headers: authHeaders,
       body: JSON.stringify({
         number: phone,
         expiry: 5,
@@ -116,13 +119,16 @@ export async function generateAdminActivationCode({ adminPhone, guardianPhone, s
     .replace(/{expiry}/g, '%EXPIRY%');
 
   try {
+    // Use type assertion to ensure TypeScript knows these are strings
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "API-KEY": API_KEY as string,
+      "USERNAME": USERNAME as string,
+    };
+    
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/generate`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "API-KEY": API_KEY,
-        "USERNAME": USERNAME,
-      },
+      headers: authHeaders,
       body: JSON.stringify({
         number: adminPhone,
         expiry: 15,
@@ -181,13 +187,16 @@ export async function verifyOtpSms(phone: string, otp: string): Promise<{ succes
   }
 
   try {
+    // Use type assertion to ensure TypeScript knows these are strings
+    const authHeaders = {
+        "Content-Type": "application/json",
+        "API-KEY": API_KEY as string,
+        "USERNAME": USERNAME as string,
+    };
+    
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/verify`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "API-KEY": API_KEY,
-            "USERNAME": USERNAME,
-        },
+        headers: authHeaders,
         body: JSON.stringify({
             otpcode: otp,
             number: phone,

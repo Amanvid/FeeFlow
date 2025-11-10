@@ -62,15 +62,23 @@ export async function generateOtp(phone: string): Promise<{ success: boolean; me
 
   try {
     console.log('Making API call to:', `${FROG_API_BASE_URL}/sms/otp/generate`);
-    console.log('Headers:', { "API-KEY": apiKey.substring(0, 10) + '...', "USERNAME": username });
+    console.log('Headers:', { "API-KEY": apiKey?.substring(0, 10) + '...', "USERNAME": username });
+    
+    if (!apiKey || !username) {
+      console.error('Missing API credentials');
+      return { success: false, message: "API credentials not configured." };
+    }
+    
+    // Use type assertion to ensure TypeScript knows these are strings
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "API-KEY": apiKey as string,
+      "USERNAME": username as string,
+    };
     
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/generate`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "API-KEY": apiKey,
-        "USERNAME": username,
-      },
+      headers: authHeaders,
       body: JSON.stringify(requestBody),
     });
 
@@ -114,13 +122,21 @@ export async function verifyOtp(phone: string, otp: string): Promise<{ success: 
   }
 
   try {
+    if (!apiKey || !username) {
+      console.error('Missing API credentials');
+      return { success: false, message: "API credentials not configured." };
+    }
+    
+    // Use type assertion to ensure TypeScript knows these are strings
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "API-KEY": apiKey as string,
+      "USERNAME": username as string,
+    };
+    
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/verify`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "API-KEY": apiKey,
-            "USERNAME": username,
-        },
+        headers: authHeaders,
         body: JSON.stringify({
             otpcode: otp,
             number: phone,
@@ -163,13 +179,21 @@ export async function generateActivationCode(phone: string): Promise<{ status: s
     }
 
     try {
+      if (!apiKey || !username) {
+        console.error('Missing API credentials');
+        return { status: 'FAILED', message: 'API credentials not configured.' };
+      }
+      
+      // Use type assertion to ensure TypeScript knows these are strings
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        "API-KEY": apiKey as string,
+        "USERNAME": username as string,
+      };
+      
       const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/generate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          "API-KEY": apiKey,
-          "USERNAME": username,
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           number: phone,
           expiry: 20, // Longer expiry for activation
@@ -217,13 +241,21 @@ export async function generateAdminActivationCode({ adminPhone, guardianPhone, s
   const messageTemplate = `${guardianPhone} Your confirmation code for FeeFlow is: %OTPCODE%. It expires in %EXPIRY% minutes. reff. ${studentName} - ${className} (GHS ${totalAmount.toFixed(2)})`;
 
   try {
+    if (!apiKey || !username) {
+      console.error('Missing API credentials');
+      return { success: false, message: "API credentials not configured." };
+    }
+    
+    // Use type assertion to ensure TypeScript knows these are strings
+    const authHeaders = {
+      "Content-Type": "application/json",
+      "API-KEY": apiKey as string,
+      "USERNAME": username as string,
+    };
+    
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/generate`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "API-KEY": apiKey,
-        "USERNAME": username,
-      },
+      headers: authHeaders,
       body: JSON.stringify({
         number: adminPhone,
         expiry: 15,

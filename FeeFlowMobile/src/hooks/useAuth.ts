@@ -91,7 +91,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = async (updates: Partial<User | MobileUser>) => {
     try {
       if (user) {
-        const updatedUser = { ...user, ...updates };
+        // Create a new object that satisfies the type constraints
+        const updatedUser = { ...user } as User | MobileUser;
+        
+        // Apply updates one by one to ensure type safety
+        Object.keys(updates).forEach(key => {
+          (updatedUser as any)[key] = (updates as any)[key];
+        });
+        
         setUser(updatedUser);
       }
     } catch (error) {

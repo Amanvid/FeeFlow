@@ -63,26 +63,15 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   };
 
   const handleVerifyOtp = async () => {
-    if (!otp.trim() || otp.length !== 6) {
+    if (!otp || otp.length !== 6) {
       Alert.alert('Error', 'Please enter a valid 6-digit OTP');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('Attempting OTP verification with:', { username, phone, otp }); // Debug log
       const response = await authService.verifyOtp(username, phone, otp);
-      console.log('OTP Verification Response:', JSON.stringify(response, null, 2)); // Debug log
-      
-      // More detailed response analysis
-      console.log('Response type:', typeof response);
-      console.log('Response keys:', Object.keys(response));
-      console.log('Response.success:', response.success);
-      console.log('Response.message:', response.message);
-      console.log('Response.user:', response.user);
-      
       if (response.success) {
-        console.log('✅ OTP verification successful - navigating to Main');
         Alert.alert('Success', 'Login successful!', [
           {
             text: 'OK',
@@ -90,20 +79,10 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           },
         ]);
       } else {
-        console.log('❌ OTP verification failed - response.success is false'); // Debug log
-        console.log('Error message from API:', response.message);
         Alert.alert('Error', response.message || 'Invalid OTP');
       }
     } catch (error) {
-      console.error('OTP Verification Error (caught):', error); // Debug log
-      let errorMessage = 'Failed to verify OTP. Please try again.';
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
-      console.log('Showing error to user:', errorMessage);
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Error', 'Failed to verify OTP. Please try again.');
     } finally {
       setLoading(false);
     }

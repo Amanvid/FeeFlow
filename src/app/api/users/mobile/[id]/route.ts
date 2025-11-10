@@ -3,10 +3,10 @@ import { getMobileUsers } from '@/lib/data';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     const mobileUsers = await getMobileUsers();
     
     const user = mobileUsers.find(u => u.username === id || u.contact === id);
@@ -43,10 +43,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     const updates = await request.json();
     
     // Get current users
@@ -96,10 +96,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     
     // Get current users
     const mobileUsers = await getMobileUsers();
