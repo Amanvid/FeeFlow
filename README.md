@@ -16,9 +16,9 @@ The following is the correct and working implementation for the Frog API OTP gen
 "use server";
 
 const FROG_API_URL = "https://frogapi.wigal.com.gh/api/v3/sms/otp";
-const SENDER_ID = "CampusFlow";
-const API_KEY = "$2y$10$6oYYcjc6Ge3/W.P.1Yqk6eHBs0ERVFR6IaBQ2qpYGBnMYp28B3uPe";
-const USERNAME = "amanvid";
+const SENDER_ID = "xxxxxxxxxxxx";
+const API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+const USERNAME = "xxxxxxx";
 
 export async function generateOtp(phone: string): Promise<{ success: boolean; message: string }> {
   console.log(`Generating OTP for ${phone}`);
