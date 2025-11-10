@@ -109,5 +109,16 @@
     "dueDate": "7 Nov. 2025",
     "invoiceNumber": "CEC-INV--0006",
     "timestamp": "2025-11-07T06:06:27.942Z"
+  },
+  {
+    "guardianName": "Joe Benner",
+    "guardianPhone": "0536282694",
+    "relationship": "Mother",
+    "studentName": "Bennett Manu",
+    "class": "Nursery 1",
+    "totalFeesBalance": 400,
+    "dueDate": "7 Nov. 2025",
+    "invoiceNumber": "CEC-INV---0007",
+    "timestamp": "2025-11-07T07:13:02.487Z"
   }
 ]

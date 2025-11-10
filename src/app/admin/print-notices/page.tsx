@@ -60,7 +60,7 @@ function FeeNoticeSlip({ student, config, noticeNumber }: FeeNoticeProps) {
                         <p className="text-right font-semibold">No. {noticeNumber}</p>
                     </div>
                     
-                    <div className="ml-4 my-2 font-bold">
+                    <div className="ml-4 my-16 font-bold">
                         <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 text-sm">
                             {hasArrears && (
                                 <>

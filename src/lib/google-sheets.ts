@@ -491,7 +491,7 @@ export class GoogleSheetsService {
         return {
           id: row[0] || '', // Invoice Number
           amount: parseFloat(row[6]) || 0, // Total Fees Balance
-          status: row[9] && (row[9].toLowerCase() === 'true' || row[9] === 'TRUE') ? 'PAID' : 'PENDING', // Paid column - handle both string and boolean
+          status: row[9] && (row[9].toString().toLowerCase() === 'true' || row[9] === 'TRUE') ? 'PAID' : 'PENDING', // Paid column - handle both string and boolean
           createdAt: safeParseDate(row[8]), // Timestamp - safely parse date
           updatedAt: safeParseDate(row[10]), // Payment Date - safely parse date
           description: `Fee payment for ${row[4]} (${row[5]})`, // Student Name and Class
@@ -563,6 +563,140 @@ export class GoogleSheetsService {
     } catch (error) {
       console.error('Error updating invoice:', error);
       return { success: false, message: `Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    }
+  }
+
+  /**
+   * Get total students count from Google Sheet with dynamic updates handling
+   */
+  async getTotalStudentsCount(): Promise<{ success: boolean; count: number; message: string }> {
+    try {
+      // Always check Summary sheet first for any "Total Students" entries
+      let result = await this.getSheetData('Summary');
+      
+      if (result.success && result.data.length > 0) {
+        const rows = result.data;
+        
+        // Look for "Total Students" in the data
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          for (let j = 0; j < row.length; j++) {
+            const cellValue = row[j]?.toString().toLowerCase() || '';
+            if (cellValue.includes('total students')) {
+              // Try to find the number in the next cell or same cell
+              let count = 0;
+              
+              // Check if number is in the same cell (after "Total Students")
+              const sameCellMatch = cellValue.match(/total students\s*(\d+)/);
+              if (sameCellMatch) {
+                count = parseInt(sameCellMatch[1], 10);
+              } else if (j + 1 < row.length) {
+                // Check next cell
+                const nextCellValue = row[j + 1]?.toString().trim();
+                if (nextCellValue && !isNaN(parseInt(nextCellValue, 10))) {
+                  count = parseInt(nextCellValue, 10);
+                }
+              }
+              
+              if (count > 0) {
+                return { success: true, count, message: 'Total students count found in Summary sheet' };
+              }
+            }
+          }
+        }
+      }
+      
+      // Check Config sheet for "Total Students" entries
+      result = await this.getSheetData('Config');
+      if (result.success && result.data.length > 0) {
+        const rows = result.data;
+        
+        // Look for "Total Students" in the data
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          for (let j = 0; j < row.length; j++) {
+            const cellValue = row[j]?.toString().toLowerCase() || '';
+            if (cellValue.includes('total students')) {
+              // Try to find the number in the next cell or same cell
+              let count = 0;
+              
+              // Check if number is in the same cell (after "Total Students")
+              const sameCellMatch = cellValue.match(/total students\s*(\d+)/);
+              if (sameCellMatch) {
+                count = parseInt(sameCellMatch[1], 10);
+              } else if (j + 1 < row.length) {
+                // Check next cell
+                const nextCellValue = row[j + 1]?.toString().trim();
+                if (nextCellValue && !isNaN(parseInt(nextCellValue, 10))) {
+                  count = parseInt(nextCellValue, 10);
+                }
+              }
+              
+              if (count > 0) {
+                return { success: true, count, message: 'Total students count found in Config sheet' };
+              }
+            }
+          }
+        }
+      }
+      
+      // Always check Metadata sheet for current student count
+      const studentsResult = await this.getSheetData('Metadata');
+      if (studentsResult.success && studentsResult.data.length > 1) {
+        const rows = studentsResult.data;
+        let validStudentCount = 0;
+        let lastValidStudentNumber = 0;
+        
+        // Skip header row (index 0), start from index 1
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          
+          // Check if this is a valid student row
+          if (row && row.length >= 2) {
+            const studentNumber = row[0]?.toString().replace(/"/g, '').trim();
+            const studentName = row[1]?.toString().replace(/"/g, '').trim();
+            
+            // Valid student row criteria:
+            // 1. Has student number that is a valid number
+            // 2. Has student name that is not empty
+            // 3. Student name is not empty quotes or summary text
+            if (studentNumber && studentName && 
+                studentName !== '' && 
+                studentName !== '""' &&
+                !isNaN(parseInt(studentNumber)) &&
+                parseInt(studentNumber) > 0) {
+              
+              validStudentCount++;
+              lastValidStudentNumber = parseInt(studentNumber);
+              
+              // Debug logging for problematic rows
+              if (i >= rows.length - 5) { // Log last few rows for debugging
+                console.log(`Row ${i}: Student #${studentNumber} - ${studentName} (Valid: true)`);
+              }
+            } else {
+              // Debug logging for invalid rows
+              if (i >= rows.length - 5) { // Log last few rows for debugging
+                console.log(`Row ${i}: Student #${studentNumber} - ${studentName} (Valid: false)`);
+              }
+            }
+          }
+        }
+        
+        // If we found valid students, return the count
+        if (validStudentCount > 0) {
+          console.log(`Student count from Metadata: ${validStudentCount} students, last student #: ${lastValidStudentNumber}`);
+          return { 
+            success: true, 
+            count: validStudentCount, 
+            message: `Total students count from Metadata sheet: ${validStudentCount} valid student rows` 
+          };
+        }
+      }
+      
+      return { success: false, count: 0, message: 'No total students information found in any sheet' };
+    } catch (error) {
+      console.error('Error getting total students count:', error);
+      return { success: false, count: 0, message: `Failed to get total students count: ${error instanceof Error ? error.message : 'Unknown error'}` };
     }
   }
 }

@@ -2,10 +2,10 @@
 
 "use server";
 
-import type { Student, SchoolConfig, PhoneClaim, InvoiceGenerationClaim, AdminUser } from './definitions';
+import type { Student, SchoolConfig, PhoneClaim, InvoiceGenerationClaim, AdminUser, MobileUser, MobileUserLogin } from './definitions';
 import fs from 'fs/promises';
 import path from 'path';
-import { PlaceHolderImages } from './placeholder-images';
+import { PlaceHolderImages } from './placeholder-images.js';
 
 const SPREADSHEET_ID = process.env.NEXT_PUBLIC_SPREADSHEET_ID || '1WHkw5YaVbnHjWD2nwTcYnQfIYV7PxascjEzY7FqL4Ew';
 const CLAIMS_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'claims.json');
@@ -488,6 +488,176 @@ export async function getAllStudents(): Promise<Student[]> {
     return [];
 }
 
+export async function getMobileUsers(): Promise<MobileUser[]> {
+    const maxRetries = 3;
+    const timeoutMs = 30000; // 30 seconds timeout
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            if (VERBOSE_LOGGING) {
+                console.log(`Fetching mobile users from Google Sheets (attempt ${attempt}/${maxRetries}): ${SPREADSHEET_ID}`);
+            }
+            
+            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=MobileUsers`;
+            
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            
+            const response = await fetch(url, { 
+                next: { revalidate: 60 },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                console.warn(`Could not fetch MobileUsers sheet. Status: ${response.statusText}`);
+                return [];
+            }
+            const csvText = await response.text();
+            const mobileUserData = csvToObjects(csvText);
+
+            if (mobileUserData.length === 0) return [];
+            
+            const mobileUsers: MobileUser[] = mobileUserData.map(user => ({
+                id: user['ID'] || '',
+                name: user['Name'] || '',
+                dateOfBirth: user['DateOfBirth'] || '',
+                address: user['Address'] || '',
+                residence: user['Residence'] || '',
+                childName: user['ChildName'] || '',
+                childClass: user['ChildClass'] || '',
+                registrationDate: user['RegistrationDate'] || '',
+                contact: user['Contact'] || '',
+                email: user['Email'] || '',
+                username: user['Username'] || '',
+                password: user['Password'] || '',
+                profilePicture: user['ProfilePicture'] || '',
+                childPicture: user['ChildPicture'] || '',
+                role: (user['Role'] as 'parent' | 'guardian') || 'parent',
+                isActive: user['IsActive']?.toLowerCase() === 'true',
+                createdAt: user['CreatedAt'] || '',
+                updatedAt: user['UpdatedAt'] || '',
+            })).filter(user => user.username);
+
+            if (VERBOSE_LOGGING) {
+                console.log(`Successfully fetched ${mobileUsers.length} mobile users`);
+            }
+            
+            return mobileUsers;
+            
+        } catch(error) {
+            console.error(`Error fetching mobile users from Google Sheet (attempt ${attempt}/${maxRetries}):`, error);
+            
+            if (attempt === maxRetries) {
+                console.error("Max retries reached, returning empty mobile users array");
+                return [];
+            }
+            
+            // Wait before retry (exponential backoff)
+            const waitTime = attempt * 2000; // 2s, 4s, 6s
+            console.log(`Retrying in ${waitTime}ms...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+    }
+    
+    return [];
+}
+
+export async function validateMobileUserLogin(loginData: MobileUserLogin): Promise<MobileUser | null> {
+    try {
+        const mobileUsers = await getMobileUsers();
+        
+        // Find user by username, phone, or email
+        const user = mobileUsers.find(u => 
+            u.isActive && (
+                u.username === loginData.username ||
+                u.contact === loginData.username ||
+                u.email === loginData.username
+            ) && u.password === loginData.password
+        );
+        
+        return user || null;
+    } catch (error) {
+        console.error('Error validating mobile user login:', error);
+        return null;
+    }
+}
+
+export async function registerMobileUser(userData: Omit<MobileUser, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; user?: MobileUser; error?: string }> {
+    try {
+        // Validate required fields
+        if (!userData.name || !userData.contact || !userData.username || !userData.password) {
+            return { success: false, error: 'Missing required fields' };
+        }
+        
+        // Check if username already exists
+        const existingUsers = await getMobileUsers();
+        const usernameExists = existingUsers.some(u => u.username === userData.username);
+        if (usernameExists) {
+            return { success: false, error: 'Username already exists' };
+        }
+        
+        // Check if contact already exists
+        const contactExists = existingUsers.some(u => u.contact === userData.contact);
+        if (contactExists) {
+            return { success: false, error: 'Contact number already registered' };
+        }
+        
+        // Generate unique ID
+        const id = `mobile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const now = new Date().toISOString();
+        
+        const newUser: MobileUser = {
+            ...userData,
+            id,
+            createdAt: now,
+            updatedAt: now,
+            isActive: true
+        };
+        
+        // Add user to Google Sheets via GoogleSheetsService
+        const { GoogleSheetsService } = await import('./google-sheets');
+        const googleSheetsService = new GoogleSheetsService();
+        
+        const rowData = [
+            newUser.id,
+            newUser.name,
+            newUser.dateOfBirth,
+            newUser.address,
+            newUser.residence,
+            newUser.childName,
+            newUser.childClass,
+            newUser.registrationDate,
+            newUser.contact,
+            newUser.email,
+            newUser.username,
+            newUser.password,
+            newUser.profilePicture || '',
+            newUser.childPicture || '',
+            newUser.role,
+            newUser.isActive.toString(),
+            newUser.createdAt,
+            newUser.updatedAt
+        ];
+        
+        const result = await googleSheetsService.appendToSheet('MobileUsers', [rowData]);
+        
+        if (result.success) {
+            console.log(`✅ Mobile user registered successfully: ${newUser.username}`);
+            return { success: true, user: newUser };
+        } else {
+            console.error('❌ Failed to register mobile user in Google Sheets:', result.message);
+            return { success: false, error: 'Failed to save user data' };
+        }
+        
+    } catch (error) {
+        console.error('❌ Error registering mobile user:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Registration failed' };
+    }
+}
+
 
 export async function getClasses(): Promise<string[]> {
   const students = await getAllStudents();
@@ -874,6 +1044,76 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
     }
     
     return [];
+}
+
+/**
+ * Get total students count with dynamic updates handling
+ * This function always checks the current state of the Google Sheets
+ */
+export async function getTotalStudentsCount(): Promise<number> {
+    try {
+        const { GoogleSheetsService } = await import('./google-sheets');
+        const googleSheetsService = new GoogleSheetsService();
+        
+        const result = await googleSheetsService.getTotalStudentsCount();
+        
+        if (result.success) {
+            if (VERBOSE_LOGGING) {
+                console.log(`Total students count: ${result.count} - ${result.message}`);
+            }
+            return result.count;
+        } else {
+            console.error('Failed to get total students count:', result.message);
+            
+            // Fallback: try to count from Metadata sheet directly
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Metadata`;
+                const response = await fetch(url, { next: { revalidate: 60 } });
+                
+                if (!response.ok) {
+                    console.warn('Could not fetch Metadata sheet for fallback count');
+                    return 0;
+                }
+                
+                const csvText = await response.text();
+                const lines = csvText.trim().split('\n');
+                
+                if (lines.length <= 1) {
+                    return 0;
+                }
+                
+                let validStudentCount = 0;
+                
+                // Skip header row, process data rows
+                for (let i = 1; i < lines.length; i++) {
+                    const row = lines[i].split(',');
+                    if (row && row.length >= 2) {
+                        const studentNumber = row[0]?.replace(/"/g, '').trim();
+                        const studentName = row[1]?.replace(/"/g, '').trim();
+                        
+                        // Valid student row criteria
+                        if (studentNumber && studentName && 
+                            studentName !== '' && 
+                            studentName !== '""' &&
+                            !isNaN(parseInt(studentNumber)) &&
+                            parseInt(studentNumber) > 0) {
+                            validStudentCount++;
+                        }
+                    }
+                }
+                
+                console.log(`Fallback student count from Metadata: ${validStudentCount}`);
+                return validStudentCount;
+                
+            } catch (fallbackError) {
+                console.error('Fallback student counting also failed:', fallbackError);
+                return 0;
+            }
+        }
+    } catch (error) {
+        console.error('Error getting total students count:', error);
+        return 0;
+    }
 }
 
     

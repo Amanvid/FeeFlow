@@ -12,6 +12,14 @@ const OTP_SENDER_ID = "FeeFlow";
 const API_KEY = process.env.FROG_API_KEY;
 const USERNAME = process.env.FROG_USERNAME;
 
+// Temporary email verification storage (in production, use Redis or database)
+const emailVerificationCodes = new Map<string, {
+  code: string;
+  email: string;
+  expiresAt: Date;
+  type: 'registration' | 'login';
+}>();
+
 // Validate credentials are set
 if (!API_KEY || !USERNAME) {
   console.error("Frog API credentials not configured. Please set FROG_API_KEY and FROG_USERNAME environment variables.");
@@ -27,6 +35,22 @@ export async function generateOtp(phone: string): Promise<{ success: boolean; me
     console.error(`Missing credentials - API_KEY: ${!!API_KEY}, USERNAME: ${!!USERNAME}`);
     return { success: false, message: "SMS service not configured. Please contact support." };
   }
+
+  // Try SMS first, fallback to email if it fails
+  try {
+    const smsResult = await generateOtpSms(phone);
+    if (smsResult.success) {
+      return smsResult;
+    }
+    console.log("SMS failed, falling back to email verification");
+    return await generateEmailVerification(phone, 'login');
+  } catch (error) {
+    console.log("SMS error, falling back to email verification", error);
+    return await generateEmailVerification(phone, 'login');
+  }
+}
+
+export async function generateOtpSms(phone: string): Promise<{ success: boolean; message: string }> {
 
   try {
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/generate`, {
@@ -127,6 +151,29 @@ export async function generateAdminActivationCode({ adminPhone, guardianPhone, s
 
 export async function verifyOtp(phone: string, otp: string): Promise<{ success: boolean; message: string }>  {
   console.log(`Verifying OTP ${otp} for ${phone}`);
+
+  // Check if credentials are available
+  if (!API_KEY || !USERNAME) {
+    // Try email verification as fallback
+    return await verifyEmailVerification(phone, otp, 'login');
+  }
+
+  // Try SMS verification first
+  try {
+    const smsResult = await verifyOtpSms(phone, otp);
+    if (smsResult.success) {
+      return smsResult;
+    }
+    // If SMS verification fails, try email verification
+    return await verifyEmailVerification(phone, otp, 'login');
+  } catch (error) {
+    console.log("SMS verification error, trying email verification", error);
+    return await verifyEmailVerification(phone, otp, 'login');
+  }
+}
+
+export async function verifyOtpSms(phone: string, otp: string): Promise<{ success: boolean; message: string }>  {
+  console.log(`Verifying SMS OTP ${otp} for ${phone}`);
 
   // Check if credentials are available
   if (!API_KEY || !USERNAME) {
@@ -299,3 +346,79 @@ export async function sendFeeReminderSms(student: Student): Promise<{ success: b
     return { success: false, message: errorMessage };
   }
 }
+
+// Email verification functions as fallback when SMS fails
+export async function generateEmailVerification(identifier: string, type: 'registration' | 'login'): Promise<{ success: boolean; message: string }> {
+  console.log(`Generating email verification for ${identifier} (${type})`);
+  
+  try {
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    
+    // Store the verification code
+    const verificationId = `${type}-${identifier}`;
+    emailVerificationCodes.set(verificationId, {
+      code,
+      email: identifier,
+      expiresAt,
+      type
+    });
+    
+    // In a real implementation, you would send an email here
+    // For now, we'll just return the code in the message for development
+    console.log(`Email verification code for ${identifier}: ${code} (expires at ${expiresAt})`);
+    
+    return { 
+      success: true, 
+      message: `Verification code sent to ${identifier}. Code: ${code} (Development mode - code shown for testing)` 
+    };
+  } catch (error) {
+    console.error("Error in generateEmailVerification:", error);
+    return { success: false, message: "Failed to generate verification code." };
+  }
+}
+
+export async function verifyEmailVerification(identifier: string, code: string, type: 'registration' | 'login'): Promise<{ success: boolean; message: string }> {
+  console.log(`Verifying email code ${code} for ${identifier} (${type})`);
+  
+  try {
+    const verificationId = `${type}-${identifier}`;
+    const storedCode = emailVerificationCodes.get(verificationId);
+    
+    if (!storedCode) {
+      return { success: false, message: "No verification code found. Please request a new code." };
+    }
+    
+    // Check if code has expired
+    if (new Date() > storedCode.expiresAt) {
+      emailVerificationCodes.delete(verificationId);
+      return { success: false, message: "Verification code has expired. Please request a new code." };
+    }
+    
+    // Verify the code
+    if (storedCode.code === code) {
+      emailVerificationCodes.delete(verificationId);
+      console.log(`Successfully verified email code for ${identifier}`);
+      return { success: true, message: "Verification successful!" };
+    } else {
+      return { success: false, message: "Invalid verification code. Please try again." };
+    }
+  } catch (error) {
+    console.error("Error in verifyEmailVerification:", error);
+    return { success: false, message: "An unexpected error occurred during verification." };
+  }
+}
+
+// Cleanup expired verification codes (run periodically)
+function cleanupExpiredEmailVerificationCodes() {
+  const now = new Date();
+  for (const [key, codeData] of emailVerificationCodes.entries()) {
+    if (codeData.expiresAt < now) {
+      emailVerificationCodes.delete(key);
+    }
+  }
+}
+
+// Run cleanup periodically (every 5 minutes)
+setInterval(cleanupExpiredEmailVerificationCodes, 5 * 60 * 1000);

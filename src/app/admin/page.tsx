@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getAllClaims, getAllStudents } from "@/lib/data";
+import { getAllClaims, getAllStudents, getTotalStudentsCount } from "@/lib/data";
 import ClaimsTable from "@/components/admin/claims-table";
 import { cn } from "@/lib/utils";
 import ClassEnrollmentChart from "@/components/admin/charts/class-enrollment-chart";
@@ -14,6 +14,7 @@ import ClassEnrollmentChart from "@/components/admin/charts/class-enrollment-cha
 export default async function AdminDashboard() {
   const claims = await getAllClaims();
   const students = await getAllStudents();
+  const totalStudents = await getTotalStudentsCount(); // Get accurate count from Google Sheet
 
   const totalClaims = claims.length;
   // Corrected: Calculate total outstanding balance from the students data source of truth.
@@ -26,7 +27,6 @@ export default async function AdminDashboard() {
 
   const maleStudents = students.filter(s => s.gender === 'Male').length;
   const femaleStudents = students.filter(s => s.gender === 'Female').length;
-  const totalStudents = students.length;
 
   const fullyPaidStudents = students.filter(s => s.balance <= 0).length;
   const partiallyPaidStudents = students.filter(s => s.balance > 0 && s.amountPaid > 0).length;

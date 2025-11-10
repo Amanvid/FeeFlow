@@ -54,3 +54,29 @@ export type AdminUser = {
   password?: string;
   role: string;
 }
+
+export type MobileUser = {
+  id: string;
+  name: string;
+  dateOfBirth: string;
+  address: string;
+  residence: string;
+  childName: string;
+  childClass: string;
+  registrationDate: string;
+  contact: string;
+  email: string;
+  username: string;
+  password: string;
+  profilePicture?: string;
+  childPicture?: string;
+  role: 'parent' | 'guardian';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MobileUserLogin = {
+  username: string; // Can be name, phone, or email
+  password: string;
+}

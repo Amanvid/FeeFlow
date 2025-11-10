@@ -29,8 +29,11 @@ export async function generateOtp(phone: string): Promise<{ success: boolean; me
   }
   
   // Use environment variables directly at runtime to avoid caching issues
-  const apiKey = process.env.FROG_API_KEY;
+  const rawApiKey = process.env.FROG_API_KEY;
   const username = process.env.FROG_USERNAME;
+  
+  // Clean the API key by removing quotes and backslashes
+  const apiKey = rawApiKey?.replace(/^["']|["']$/g, '').replace(/\\/g, '');
   
   if (!apiKey || !username) {
     console.error('Missing API credentials in generateOtp');
@@ -99,8 +102,11 @@ export async function verifyOtp(phone: string, otp: string): Promise<{ success: 
   }
   
   // Use environment variables directly at runtime
-  const apiKey = process.env.FROG_API_KEY;
+  const rawApiKey = process.env.FROG_API_KEY;
   const username = process.env.FROG_USERNAME;
+  
+  // Clean the API key by removing quotes and backslashes
+  const apiKey = rawApiKey?.replace(/^["']|["']$/g, '').replace(/\\/g, '');
   
   if (!apiKey || !username) {
     console.error('Missing API credentials in verifyOtp');
@@ -145,8 +151,11 @@ export async function generateActivationCode(phone: string): Promise<{ status: s
     }
     
     // Use environment variables directly at runtime
-    const apiKey = process.env.FROG_API_KEY;
+    const rawApiKey = process.env.FROG_API_KEY;
     const username = process.env.FROG_USERNAME;
+    
+    // Clean the API key by removing quotes and backslashes
+    const apiKey = rawApiKey?.replace(/^["']|["']$/g, '').replace(/\\/g, '');
     
     if (!apiKey || !username) {
       console.error('Missing API credentials in generateActivationCode');
