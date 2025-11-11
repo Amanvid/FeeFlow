@@ -17,20 +17,20 @@ export async function GET(request: NextRequest) {
     
     // Transform claims to invoices
     let invoices = claims.map((claim, index) => ({
-      id: claim.id || `temp-${index}`,
-      invoiceNumber: `INV-${String(claim.id || index).padStart(6, '0')}`,
-      studentId: claim.studentId,
+      id: claim.invoiceNumber || `temp-${index}`,
+      invoiceNumber: claim.invoiceNumber || `INV-${String(index).padStart(6, '0')}`,
+      studentId: claim.invoiceNumber,
       studentName: claim.studentName,
       class: claim.class,
-      amount: claim.amount,
-      status: claim.status || 'pending',
+      amount: claim.totalFeesBalance,
+      status: (claim as any).paid ? 'paid' : 'pending',
       dueDate: claim.dueDate,
-      createdAt: claim.createdAt || new Date().toISOString(),
-      items: claim.items || [{
-        description: claim.description || 'School Fees',
+      createdAt: claim.timestamp || new Date().toISOString(),
+      items: [{
+        description: 'School Fees',
         quantity: 1,
-        unitPrice: claim.amount,
-        total: claim.amount
+        unitPrice: claim.totalFeesBalance,
+        total: claim.totalFeesBalance
       }]
     }));
     

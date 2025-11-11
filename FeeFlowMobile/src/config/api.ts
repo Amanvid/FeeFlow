@@ -12,7 +12,7 @@ export const DEPLOYMENT_URLS = {
 } as const;
 
 // Change this to switch between deployments
-export const CURRENT_DEPLOYMENT: keyof typeof DEPLOYMENT_URLS = 'primary';
+export const CURRENT_DEPLOYMENT: keyof typeof DEPLOYMENT_URLS = 'local';
 
 export const API_BASE_URL = DEPLOYMENT_URLS[CURRENT_DEPLOYMENT];
 

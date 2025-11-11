@@ -24,8 +24,8 @@ export async function GET() {
 
     // Process claims for monthly data
     claims?.forEach(claim => {
-      if (claim.createdAt) {
-        const month = claim.createdAt.slice(0, 7);
+      if (claim.timestamp) {
+        const month = claim.timestamp.slice(0, 7);
         if (!monthlyData.has(month)) {
           monthlyData.set(month, {
             month: month,
@@ -39,9 +39,9 @@ export async function GET() {
         const monthData = monthlyData.get(month);
         monthData.invoices++;
         
-        if (claim.status === 'paid') {
+        if ((claim as any).paid) {
           monthData.paid++;
-          monthData.revenue += parseFloat(claim.amount?.toString() || '0');
+          monthData.revenue += parseFloat(claim.totalFeesBalance?.toString() || '0');
         } else {
           monthData.pending++;
         }
@@ -57,19 +57,19 @@ export async function GET() {
         totalStudents: students?.length || 0,
         totalInvoices: claims?.length || 0,
         totalRevenue: claims?.reduce((sum, claim) => 
-          claim.status === 'paid' ? sum + parseFloat(claim.amount?.toString() || '0') : sum, 0
+          (claim as any).paid ? sum + parseFloat(claim.totalFeesBalance?.toString() || '0') : sum, 0
         ) || 0,
         outstandingAmount: claims?.reduce((sum, claim) => 
-          claim.status !== 'paid' ? sum + parseFloat(claim.amount?.toString() || '0') : sum, 0
+          !(claim as any).paid ? sum + parseFloat(claim.totalFeesBalance?.toString() || '0') : sum, 0
         ) || 0
       },
       monthlySummary,
       recentActivity: claims?.slice(-10).map(claim => ({
-        id: claim.id,
+        id: claim.invoiceNumber,
         studentName: claim.studentName,
-        amount: claim.amount,
-        status: claim.status || 'pending',
-        createdAt: claim.createdAt
+        amount: claim.totalFeesBalance,
+        status: (claim as any).paid ? 'paid' : 'pending',
+        createdAt: claim.timestamp
       })) || []
     });
 

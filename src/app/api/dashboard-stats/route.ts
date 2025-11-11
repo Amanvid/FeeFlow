@@ -11,20 +11,20 @@ export async function GET() {
     const totalStudents = students?.length || 0;
     const totalInvoices = claims?.length || 0;
     const pendingInvoices = claims?.filter(claim => 
-      !claim.status || claim.status === 'pending'
+      !(claim as any).paid
     ).length || 0;
     const paidInvoices = claims?.filter(claim => 
-      claim.status === 'paid'
+      (claim as any).paid
     ).length || 0;
     
     const totalRevenue = claims?.reduce((sum, claim) => {
-      const amount = parseFloat(claim.amount?.toString() || '0');
-      return claim.status === 'paid' ? sum + amount : sum;
+      const amount = parseFloat(claim.totalFeesBalance?.toString() || '0');
+      return (claim as any).paid ? sum + amount : sum;
     }, 0) || 0;
     
     const totalOutstanding = claims?.reduce((sum, claim) => {
-      const amount = parseFloat(claim.amount?.toString() || '0');
-      return claim.status !== 'paid' ? sum + amount : sum;
+      const amount = parseFloat(claim.totalFeesBalance?.toString() || '0');
+      return !(claim as any).paid ? sum + amount : sum;
     }, 0) || 0;
 
     return NextResponse.json({
@@ -35,11 +35,11 @@ export async function GET() {
       totalRevenue,
       totalOutstanding,
       recentInvoices: claims?.slice(-5).map(claim => ({
-        id: claim.id,
+        id: claim.invoiceNumber,
         studentName: claim.studentName,
-        amount: claim.amount,
-        status: claim.status || 'pending',
-        createdAt: claim.createdAt
+        amount: claim.totalFeesBalance,
+        status: (claim as any).paid ? 'paid' : 'pending',
+        createdAt: claim.timestamp
       })) || []
     });
 
