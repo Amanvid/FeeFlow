@@ -48,11 +48,18 @@ A React Native mobile application for FeeFlow - School Fee Management System. Th
 
 ### API Configuration
 
-Update the API base URL in `src/config/api.ts`:
+The mobile app is configured to connect to your Vercel deployment. Update the API base URL in `src/config/api.ts` if needed:
 
 ```typescript
-export const API_BASE_URL = 'https://your-vercel-app.vercel.app/api';
+// Available deployments:
+export const DEPLOYMENT_URLS = {
+  primary: "https://fee-flow-five.vercel.app/api",
+  alternative1: "https://fee-flow-git-main-ghub-it-centers-projects.vercel.app/api",
+  alternative2: "https://fee-flow-k6097t0s0-ghub-it-centers-projects.vercel.app/api",
+};
 ```
+
+Change the `CURRENT_DEPLOYMENT` variable to switch between different deployments.
 
 ## Project Structure
 

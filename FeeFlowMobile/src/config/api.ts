@@ -1,6 +1,20 @@
 // API Configuration for FeeFlow Mobile App
-export const API_BASE_URL = "https://fee-flow-five.vercel.app/api";
-// export const API_BASE_URL = "http://localhost:9002/api"; // Local development
+// Available deployments:
+// Primary: https://fee-flow-five.vercel.app/api
+// Alternative 1: https://fee-flow-git-main-ghub-it-centers-projects.vercel.app/api
+// Alternative 2: https://fee-flow-k6097t0s0-ghub-it-centers-projects.vercel.app/api
+
+export const DEPLOYMENT_URLS = {
+  primary: "https://fee-flow-five.vercel.app/api",
+  alternative1: "https://fee-flow-git-main-ghub-it-centers-projects.vercel.app/api",
+  alternative2: "https://fee-flow-k6097t0s0-ghub-it-centers-projects.vercel.app/api",
+  local: "http://localhost:9002/api",
+} as const;
+
+// Change this to switch between deployments
+export const CURRENT_DEPLOYMENT: keyof typeof DEPLOYMENT_URLS = 'primary';
+
+export const API_BASE_URL = DEPLOYMENT_URLS[CURRENT_DEPLOYMENT];
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -32,3 +46,10 @@ export const API_ENDPOINTS = {
     summary: `${API_BASE_URL}/dashboard-summary`,
   },
 } as const;
+
+// Helper function to switch deployments
+export const switchDeployment = (deployment: keyof typeof DEPLOYMENT_URLS) => {
+  console.log(`Switching to deployment: ${deployment} - ${DEPLOYMENT_URLS[deployment]}`);
+  // In a real app, you might want to restart or reload the app here
+  return DEPLOYMENT_URLS[deployment];
+};
