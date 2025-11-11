@@ -8,10 +8,6 @@ import type { Student } from './definitions';
 const FROG_API_BASE_URL = "https://frogapi.wigal.com.gh/api/v3";
 const OTP_SENDER_ID = "FeeFlow";
 
-// Get credentials from environment variables
-const API_KEY = process.env.FROG_API_KEY;
-const USERNAME = process.env.FROG_USERNAME;
-
 // Temporary email verification storage (in production, use Redis or database)
 const emailVerificationCodes = new Map<string, {
   code: string;
@@ -20,25 +16,28 @@ const emailVerificationCodes = new Map<string, {
   type: 'registration' | 'login';
 }>();
 
-// Validate credentials are set
-if (!API_KEY || !USERNAME) {
-  console.error("Frog API credentials not configured. Please set FROG_API_KEY and FROG_USERNAME environment variables.");
-}
-
 export async function generateOtp(phone: string): Promise<{ success: boolean; message: string }> {
   console.log(`Generating OTP for ${phone}`);
-  console.log(`API_KEY available: ${!!API_KEY}, length: ${API_KEY?.length}`);
-  console.log(`USERNAME available: ${!!USERNAME}`);
+  
+  // Load credentials at runtime
+  const rawApiKey = process.env.FROG_API_KEY;
+  const username = process.env.FROG_USERNAME;
+  
+  // Clean the API key by removing quotes and backslashes
+  const apiKey = rawApiKey?.replace(/^["']|["']$/g, '').replace(/\\/g, '');
+  
+  console.log(`API_KEY available: ${!!apiKey}, length: ${apiKey?.length}`);
+  console.log(`USERNAME available: ${!!username}`);
 
   // Check if credentials are available
-  if (!API_KEY || !USERNAME) {
-    console.error(`Missing credentials - API_KEY: ${!!API_KEY}, USERNAME: ${!!USERNAME}`);
+  if (!apiKey || !username) {
+    console.error(`Missing credentials - API_KEY: ${!!apiKey}, USERNAME: ${!!username}`);
     return { success: false, message: "SMS service not configured. Please contact support." };
   }
 
   // Try SMS first, fallback to email if it fails
   try {
-    const smsResult = await generateOtpSms(phone);
+    const smsResult = await generateOtpSms(phone, apiKey, username);
     if (smsResult.success) {
       return smsResult;
     }
@@ -50,14 +49,14 @@ export async function generateOtp(phone: string): Promise<{ success: boolean; me
   }
 }
 
-export async function generateOtpSms(phone: string): Promise<{ success: boolean; message: string }> {
+export async function generateOtpSms(phone: string, apiKey: string, username: string): Promise<{ success: boolean; message: string }> {
 
   try {
-    // Use type assertion to ensure TypeScript knows these are strings
+    // Use the provided credentials
     const authHeaders = {
       "Content-Type": "application/json",
-      "API-KEY": API_KEY as string,
-      "USERNAME": USERNAME as string,
+      "API-KEY": apiKey,
+      "USERNAME": username,
     };
     
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/generate`, {
@@ -99,8 +98,15 @@ interface AdminActivationCodeParams {
 export async function generateAdminActivationCode({ adminPhone, guardianPhone, studentName, className, totalAmount }: AdminActivationCodeParams): Promise<{ success: boolean; message: string }> {
   console.log(`Generating 8-digit activation code for admin ${adminPhone}`);
   
+  // Load credentials at runtime
+  const rawApiKey = process.env.FROG_API_KEY;
+  const username = process.env.FROG_USERNAME;
+  
+  // Clean the API key by removing quotes and backslashes
+  const apiKey = rawApiKey?.replace(/^["']|["']$/g, '').replace(/\\/g, '');
+  
   // Check if credentials are available
-  if (!API_KEY || !USERNAME) {
+  if (!apiKey || !username) {
     return { success: false, message: "SMS service not configured. Please contact support." };
   }
   
@@ -119,11 +125,11 @@ export async function generateAdminActivationCode({ adminPhone, guardianPhone, s
     .replace(/{expiry}/g, '%EXPIRY%');
 
   try {
-    // Use type assertion to ensure TypeScript knows these are strings
+    // Use the provided credentials
     const authHeaders = {
       "Content-Type": "application/json",
-      "API-KEY": API_KEY as string,
-      "USERNAME": USERNAME as string,
+      "API-KEY": apiKey,
+      "USERNAME": username,
     };
     
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/generate`, {
@@ -158,15 +164,22 @@ export async function generateAdminActivationCode({ adminPhone, guardianPhone, s
 export async function verifyOtp(phone: string, otp: string): Promise<{ success: boolean; message: string }>  {
   console.log(`Verifying OTP ${otp} for ${phone}`);
 
+  // Load credentials at runtime
+  const rawApiKey = process.env.FROG_API_KEY;
+  const username = process.env.FROG_USERNAME;
+  
+  // Clean the API key by removing quotes and backslashes
+  const apiKey = rawApiKey?.replace(/^["']|["']$/g, '').replace(/\\/g, '');
+
   // Check if credentials are available
-  if (!API_KEY || !USERNAME) {
+  if (!apiKey || !username) {
     // Try email verification as fallback
     return await verifyEmailVerification(phone, otp, 'login');
   }
 
   // Try SMS verification first
   try {
-    const smsResult = await verifyOtpSms(phone, otp);
+    const smsResult = await verifyOtpSms(phone, otp, apiKey, username);
     if (smsResult.success) {
       return smsResult;
     }
@@ -178,20 +191,20 @@ export async function verifyOtp(phone: string, otp: string): Promise<{ success: 
   }
 }
 
-export async function verifyOtpSms(phone: string, otp: string): Promise<{ success: boolean; message: string }>  {
+export async function verifyOtpSms(phone: string, otp: string, apiKey: string, username: string): Promise<{ success: boolean; message: string }>  {
   console.log(`Verifying SMS OTP ${otp} for ${phone}`);
 
   // Check if credentials are available
-  if (!API_KEY || !USERNAME) {
+  if (!apiKey || !username) {
     return { success: false, message: "SMS service not configured. Please contact support." };
   }
 
   try {
-    // Use type assertion to ensure TypeScript knows these are strings
+    // Use the provided credentials
     const authHeaders = {
         "Content-Type": "application/json",
-        "API-KEY": API_KEY as string,
-        "USERNAME": USERNAME as string,
+        "API-KEY": apiKey,
+        "USERNAME": username,
     };
     
     const response = await fetch(`${FROG_API_BASE_URL}/sms/otp/verify`, {
@@ -228,8 +241,15 @@ type Destination = {
 
 export async function sendSms(destinations: Destination[], senderId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    // Load credentials at runtime
+    const rawApiKey = process.env.FROG_API_KEY;
+    const username = process.env.FROG_USERNAME;
+    
+    // Clean the API key by removing quotes and backslashes
+    const apiKey = rawApiKey?.replace(/^["']|["']$/g, '').replace(/\\/g, '');
+    
     // Check if credentials are available
-    if (!API_KEY || !USERNAME) {
+    if (!apiKey || !username) {
       return { success: false, error: "SMS service not configured. Please contact support." };
     }
 
@@ -244,8 +264,8 @@ export async function sendSms(destinations: Destination[], senderId: string): Pr
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "API-KEY": API_KEY,
-        "USERNAME": USERNAME,
+        "API-KEY": apiKey,
+        "USERNAME": username,
       },
       body: JSON.stringify({
         senderid: senderId,

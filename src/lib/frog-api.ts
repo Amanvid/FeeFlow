@@ -21,14 +21,7 @@ console.log('Final USERNAME:', USERNAME || 'Not set');
 export async function generateOtp(phone: string): Promise<{ success: boolean; message: string }> {
   console.log(`Generating OTP for ${phone}`);
   
-  // Force reload environment variables at runtime
-  try {
-    require('dotenv').config({ path: '.env.local' });
-  } catch (e) {
-    console.log('dotenv config failed:', e);
-  }
-  
-  // Use environment variables directly at runtime to avoid caching issues
+  // Use environment variables directly at runtime
   const rawApiKey = process.env.FROG_API_KEY;
   const username = process.env.FROG_USERNAME;
   
@@ -101,13 +94,6 @@ export async function generateOtp(phone: string): Promise<{ success: boolean; me
 
 export async function verifyOtp(phone: string, otp: string): Promise<{ success: boolean; message: string }> {
   console.log(`Verifying OTP ${otp} for ${phone}`);
-
-  // Force reload environment variables at runtime
-  try {
-    require('dotenv').config({ path: '.env.local' });
-  } catch (e) {
-    console.log('dotenv config failed:', e);
-  }
   
   // Use environment variables directly at runtime
   const rawApiKey = process.env.FROG_API_KEY;
@@ -159,13 +145,6 @@ export async function verifyOtp(phone: string, otp: string): Promise<{ success: 
 }
 
 export async function generateActivationCode(phone: string): Promise<{ status: string; message: string }> {
-    // Force reload environment variables at runtime
-    try {
-      require('dotenv').config({ path: '.env.local' });
-    } catch (e) {
-      console.log('dotenv config failed:', e);
-    }
-    
     // Use environment variables directly at runtime
     const rawApiKey = process.env.FROG_API_KEY;
     const username = process.env.FROG_USERNAME;
@@ -222,13 +201,6 @@ interface AdminActivationCodeParams {
 export async function generateAdminActivationCode({ adminPhone, guardianPhone, studentName, className, totalAmount }: AdminActivationCodeParams): Promise<{ success: boolean; message: string }> {
   console.log(`Generating 8-digit activation code for admin ${adminPhone}`);
    
-  // Force reload environment variables at runtime
-  try {
-    require('dotenv').config({ path: '.env.local' });
-  } catch (e) {
-    console.log('dotenv config failed:', e);
-  }
-  
   // Use environment variables directly at runtime
   const apiKey = process.env.FROG_API_KEY;
   const username = process.env.FROG_USERNAME;
