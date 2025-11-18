@@ -1,0 +1,22 @@
+{
+  "placeholderImages": [
+    {
+      "id": "school-logo",
+      "description": "School logo for Chariot Educational Complex",
+      "imageUrl": "/cec_logo.png",
+      "imageHint": "school logo"
+    },
+    {
+      "id": "hero-image-1",
+      "description": "A parent helping a child with homework, illustrating the educational context.",
+      "imageUrl": "/image.jpg",
+      "imageHint": "parent child education"
+    },
+    {
+      "id": "stu-image",
+      "description": "A parent helping a child with homework, illustrating the educational context.",
+      "imageUrl": "/logo.png",
+      "imageHint": "parent child education"
+    }
+  ]
+}
