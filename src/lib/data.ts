@@ -444,8 +444,9 @@ export async function getAllStudents(): Promise<Student[]> {
                     schoolFeesPaid: schoolFeesPaid,
                     booksFeePaid: booksFeePayment,
                     gender: gender,
-                    guardianName: s['Parent Name'] || '',
-                    guardianPhone: s['Contact'] || '',
+                    guardianName: s['PARENT NAME'] || '',
+                    guardianPhone: s['CONTACT'] || '',
+                    guardianLocation: s['LOCATION'] || '',
                 };
                 return student;
             }).filter(s => s.studentName && s.class);
