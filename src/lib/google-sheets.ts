@@ -205,11 +205,16 @@ export class GoogleSheetsService {
   /**
    * Get data from a specific sheet
    */
-  async getSheetData(sheetName: string, range?: string) {
+  async getSheetData(
+    sheetName: string,
+    range?: string,
+    valueRenderOption?: 'FORMULA' | 'UNFORMATTED_VALUE' | 'FORMATTED_VALUE'
+  ) {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: range ? `${sheetName}!${range}` : `${sheetName}!A1:Z1000`, // Default range
+        valueRenderOption,
       });
 
       return {

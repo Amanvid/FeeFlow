@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Teacher Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>Teacher Authentication Test</h1>
+    <div id="results"></div>
+
+    <script>
+        async function testTeacherLogin() {
+            const resultsDiv = document.getElementById('results');
+            
+            function addResult(message, type = 'info') {
+                const div = document.createElement('div');
+                div.className = `test-result ${type}`;
+                div.textContent = message;
+                resultsDiv.appendChild(div);
+            }
+
+            addResult('Starting teacher authentication tests...', 'info');
+
+            try {
+                // Test 1: Invalid credentials
+                addResult('Test 1: Testing with invalid credentials...', 'info');
+                const response1 = await fetch('http://localhost:9002/api/auth/teacher-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'invalid_user',
+                        password: 'wrong_password'
+                    })
+                });
+
+                const result1 = await response1.json();
+                addResult(`Invalid credentials test: ${result1.message}`, result1.success ? 'error' : 'success');
+
+                // Test 2: Check if API is responding
+                addResult('Test 2: Checking API response...', 'info');
+                if (response1.ok) {
+                    addResult('✅ Teacher login API is responding correctly!', 'success');
+                } else {
+                    addResult('❌ Teacher login API is not responding', 'error');
+                }
+
+                // Test 3: Check data structure
+                addResult('Test 3: Validating response structure...', 'info');
+                if (result1.success !== undefined && result1.message !== undefined) {
+                    addResult('✅ Response structure is correct!', 'success');
+                } else {
+                    addResult('❌ Response structure is incorrect', 'error');
+                }
+
+                addResult('Teacher authentication tests completed!', 'info');
+
+            } catch (error) {
+                addResult(`❌ Error during testing: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', testTeacherLogin);
+    </script>
+</body>
+</html>

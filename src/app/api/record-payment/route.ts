@@ -32,7 +32,8 @@ export async function POST(request: Request) {
     }
 
     // Get the current row data for the student
-    const sheetData = await googleSheetsService.getSheetData('Metadata');
+    // Fetch sheet data with formulas visible so we can append correctly
+    const sheetData = await googleSheetsService.getSheetData('Metadata', undefined, 'FORMULA');
     if (!sheetData.success) {
       return NextResponse.json(
         { success: false, message: 'Failed to fetch sheet data' },
@@ -92,32 +93,36 @@ export async function POST(request: Request) {
     let paymentColumnName = '';
     
     if (paymentType === 'School Fees') {
-      // Find column indices for payment columns
-      const initialAmountColumnIndex = findColumnIndex('INTIAL AMOUNT PAID');
+      // Always update the PAYMENT column with a formula string
       const paymentColumnIndex = findColumnIndex('PAYMENT');
-      
-      if (initialAmountColumnIndex === -1 || paymentColumnIndex === -1) {
+
+      if (paymentColumnIndex === -1) {
         return NextResponse.json(
-          { success: false, message: 'Required payment columns not found in sheet' },
+          { success: false, message: 'PAYMENT column not found in sheet' },
           { status: 500 }
         );
       }
-      
-      // Check if this is the first school fees payment
-      const initialAmountPaid = parseFloat(studentRowData[initialAmountColumnIndex] || '0');
-      const additionalPayments = parseFloat(studentRowData[paymentColumnIndex] || '0');
-      
-      if (initialAmountPaid === 0) {
-        // First school fees payment - update INTIAL AMOUNT PAID column
-        updateColumnIndex = initialAmountColumnIndex;
-        currentValue = initialAmountPaid;
-        paymentColumnName = 'Initial Amount Paid';
+
+      updateColumnIndex = paymentColumnIndex;
+      const currentCellRaw = (studentRowData[paymentColumnIndex] ?? '').toString().trim();
+
+      // Build formula according to requirement: empty -> =amount, existing -> append +amount
+      const amountNum = typeof amount === 'number' ? amount : parseFloat(amount);
+      const amountStr = Number.isFinite(amountNum) ? amountNum.toString() : '0';
+
+      let newCellValue: string;
+      if (!currentCellRaw) {
+        newCellValue = `=${amountStr}`;
+      } else if (currentCellRaw.startsWith('=')) {
+        newCellValue = `${currentCellRaw}+${amountStr}`;
       } else {
-        // Subsequent school fees payment - update PAYMENT column
-        updateColumnIndex = paymentColumnIndex;
-        currentValue = additionalPayments;
-        paymentColumnName = 'School Fees Payment';
+        // If existing is a plain number or expression without '=', prefix '=' then append
+        newCellValue = `=${currentCellRaw}+${amountStr}`;
       }
+
+      studentRowData[updateColumnIndex] = newCellValue;
+      paymentColumnName = 'School Fees Payment';
+
     } else if (paymentType === 'Books Fees') {
       const booksPaymentColumnIndex = findColumnIndex('BOOKS Fees Payment');
       
@@ -127,9 +132,22 @@ export async function POST(request: Request) {
           { status: 500 }
         );
       }
-      
       updateColumnIndex = booksPaymentColumnIndex;
-      currentValue = parseFloat(studentRowData[booksPaymentColumnIndex] || '0');
+      const currentCellRaw = (studentRowData[booksPaymentColumnIndex] ?? '').toString().trim();
+
+      const amountNum = typeof amount === 'number' ? amount : parseFloat(amount);
+      const amountStr = Number.isFinite(amountNum) ? amountNum.toString() : '0';
+
+      let newCellValue: string;
+      if (!currentCellRaw) {
+        newCellValue = `=${amountStr}`;
+      } else if (currentCellRaw.startsWith('=')) {
+        newCellValue = `${currentCellRaw}+${amountStr}`;
+      } else {
+        newCellValue = `=${currentCellRaw}+${amountStr}`;
+      }
+
+      studentRowData[updateColumnIndex] = newCellValue;
       paymentColumnName = 'Books Fees Payment';
     }
 
@@ -139,13 +157,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    // Calculate new payment amount with proper validation
-    const currentValueNum = isNaN(currentValue) ? 0 : currentValue;
-    const newPaymentAmount = currentValueNum + amount;
-    
-    // Update the student data with proper formatting
-    studentRowData[updateColumnIndex] = newPaymentAmount.toFixed(2);
 
     // Update the row in Google Sheets
     const updateResult = await googleSheetsService.updateRowInSheet('Metadata', studentRowIndex, studentRowData);
@@ -182,7 +193,7 @@ export async function POST(request: Request) {
         studentClass,
         paymentType,
         amount,
-        newTotal: newPaymentAmount,
+        newValue: studentRowData[updateColumnIndex],
         studentId: student.id,
         columnUpdated: paymentColumnName,
       });

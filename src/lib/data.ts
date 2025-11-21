@@ -2,7 +2,7 @@
 
 "use server";
 
-import type { Student, SchoolConfig, PhoneClaim, InvoiceGenerationClaim, AdminUser } from './definitions';
+import type { Student, SchoolConfig, PhoneClaim, InvoiceGenerationClaim, AdminUser, TeacherUser } from './definitions';
 import { PlaceHolderImages } from './placeholder-images';
 
 const SPREADSHEET_ID = process.env.NEXT_PUBLIC_SPREADSHEET_ID || '1WHkw5YaVbnHjWD2nwTcYnQfIYV7PxascjEzY7FqL4Ew';
@@ -688,6 +688,71 @@ export async function getAllClaims(): Promise<PhoneClaim[]> {
 }
 
 
+
+export async function getTeacherUsers(): Promise<TeacherUser[]> {
+    const maxRetries = 3;
+    const timeoutMs = 30000; // 30 seconds timeout
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            if (VERBOSE_LOGGING) {
+                console.log(`Fetching teachers from Google Sheets (attempt ${attempt}/${maxRetries}): ${SPREADSHEET_ID}`);
+            }
+            
+            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Teachers`;
+            
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            
+            const response = await fetch(url, { 
+                next: { revalidate: 60 },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch Teachers sheet: ${response.statusText}`);
+            }
+            
+            const csvText = await response.text();
+            const teacherData = csvToObjects(csvText);
+
+            if (teacherData.length === 0) return [];
+            
+            const teachers: TeacherUser[] = teacherData.map(t => ({
+                name: t['Teacher Name'] || t['Name'] || '',
+                class: t['Class'] || '',
+                role: t['Role'] || '',
+                status: t['Status'] || '',
+                username: t['Username'] || '',
+                password: t['Password'] || ''
+            })).filter(t => t.username && t.password && t.status.toLowerCase() === 'active');
+
+            if (VERBOSE_LOGGING) {
+                console.log(`Successfully fetched ${teachers.length} active teachers`);
+            }
+            
+            return teachers;
+            
+        } catch (error) {
+            console.error(`Error fetching teachers from Google Sheet (attempt ${attempt}/${maxRetries}):`, error);
+            
+            if (attempt === maxRetries) {
+                console.error("Max retries reached, returning empty teacher array");
+                return [];
+            }
+            
+            // Wait before retry (exponential backoff)
+            const waitTime = attempt * 2000; // 2s, 4s, 6s
+            console.log(`Retrying in ${waitTime}ms...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+    }
+    
+    return [];
+}
 
 export async function getAdminUsers(): Promise<AdminUser[]> {
     const maxRetries = 3;

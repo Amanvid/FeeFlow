@@ -33,14 +33,21 @@ export async function getSession() {
   return await decrypt(session);
 }
 
-export async function verifySession(session: string) {
-    const payload = await decrypt(session);
-    if (!payload) {
-      return { isAuth: false };
+export async function verifySession(session?: string) {
+  try {
+    const sessionData = session || await getSession();
+    if (!sessionData) {
+      return null;
     }
-    const isExpired = payload.exp * 1000 < Date.now();
+    
+    const isExpired = sessionData.exp * 1000 < Date.now();
     if (isExpired) {
-        return { isAuth: false };
+      return null;
     }
-    return { isAuth: true, user: payload.user };
+    
+    return sessionData;
+  } catch (error) {
+    console.error('Session verification failed:', error);
+    return null;
+  }
 }

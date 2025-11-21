@@ -54,3 +54,12 @@ export type AdminUser = {
   password?: string;
   role: string;
 }
+
+export type TeacherUser = {
+  name: string;
+  class: string;
+  role: string;
+  status: string;
+  username: string;
+  password?: string;
+}

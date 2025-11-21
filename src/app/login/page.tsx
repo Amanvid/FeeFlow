@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -282,6 +283,11 @@ export default function LoginPage() {
                          }}>
                             Start Over
                         </Button>
+                        <div className="mt-4 text-center">
+                            <Link href="/teacher/login" className="text-sm text-blue-600 hover:text-blue-800 underline">
+                                Teacher Portal Login
+                            </Link>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
