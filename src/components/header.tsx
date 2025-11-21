@@ -24,6 +24,9 @@ export function Header() {
             />
           </div>
         <div className="flex items-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/teacher/login">Teacher Login</Link>
+            </Button>
             <Button asChild>
               <Link href="/check-fees">Check Fees</Link>
             </Button>

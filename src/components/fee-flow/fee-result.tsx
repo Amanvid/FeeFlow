@@ -150,7 +150,7 @@ export default function FeeResult({ student, userInfo }: FeeResultProps) {
                 <div>
                   <h1 className="text-2xl font-bold font-headline text-gray-800">{config.schoolName}</h1>
                   <p className="text-sm text-muted-foreground">{config.address}</p>
-                  <p className="text-sm text-muted-foreground">{config.momoNumber}</p>
+                  <p className="text-sm font-bold text-muted-foreground">{config.momoNumber}</p>
                 </div>
               </div>
               <div className="text-right">
@@ -173,8 +173,8 @@ export default function FeeResult({ student, userInfo }: FeeResultProps) {
                       <p className="text-sm text-foreground">{issueDate}</p>
                   </div>
                   <div className="flex justify-end gap-6 mt-2">
-                      <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Due Date</p>
-                      <p className="text-sm text-foreground">{config.dueDate}</p>
+                      <p className="text-sm font-bold text-yellow-800 uppercase tracking-wider bg-yellow-50 px-3 py-1 rounded border border-yellow-200">Due Date</p>
+                      <p className="text-sm font-bold text-yellow-700">{config.dueDate}</p>
                   </div>
               </div>
             </section>
@@ -206,9 +206,9 @@ export default function FeeResult({ student, userInfo }: FeeResultProps) {
                   <p className="font-medium text-green-600">(GH₵ {student.amountPaid.toFixed(2)})</p>
                 </div>
                 <Separator className="my-2" />
-                <div className="flex justify-between items-center">
-                  <p className="text-lg font-bold text-primary">Balance Due</p>
-                  <p className="text-2xl font-bold text-red-600">GH₵ {student.balance.toFixed(2)}</p>
+                <div className="flex justify-between items-center bg-red-50 rounded-lg px-4 py-3 border-2 border-red-200">
+                  <p className="text-xl font-bold text-red-800">Balance Due</p>
+                  <p className="text-3xl font-bold text-red-600">GH₵ {student.balance.toFixed(2)}</p>
                 </div>
               </div>
             </section>
@@ -228,7 +228,7 @@ export default function FeeResult({ student, userInfo }: FeeResultProps) {
                 <div>
                     <h4 className="font-semibold text-foreground uppercase tracking-wider mb-2">Payment Methods</h4>
                     <p>Mobile Money</p>
-                    <p>Dial {config.momoNumber}.</p>
+                    <p>Dial <span className="font-bold">{config.momoNumber}</span>.</p>
                     <p>Use "{invoiceNumber}" as reference.</p>
                 </div>
             </footer>

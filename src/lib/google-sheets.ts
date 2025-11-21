@@ -840,6 +840,91 @@ export class GoogleSheetsService {
       };
     }
   }
+
+  /**
+   * Save due date to Google Sheets.
+   * Updates the due date in the Config sheet.
+   */
+  async saveDueDate(dueDate: string): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      // Get current config data
+      const configResult = await this.getSheetData('Config');
+      
+      if (!configResult.success || !configResult.data || configResult.data.length === 0) {
+        // If Config sheet doesn't exist, create it with headers
+        await this.createSheet('Config');
+        const headers = [
+          'School Name',
+          'Address',
+          'Momo Number',
+          'Due Date',
+          'Invoice Prefix',
+          'Sender ID',
+          'SMS Enabled',
+          'Fee Reminders Enabled',
+          'Payment Notifications Enabled',
+          'Admission Notifications Enabled',
+        ];
+        await this.appendToSheet('Config', [headers]);
+        
+        // Add the due date in the second row
+        const valuesRow = [
+          '',
+          '',
+          '',
+          dueDate,
+          '',
+          '',
+          'false',
+          'false',
+          'false',
+          'false',
+        ];
+        return await this.appendToSheet('Config', [valuesRow]);
+      }
+
+      // Config sheet exists; update row 2 if possible, otherwise append
+      const rows = configResult.data;
+      if (rows.length >= 2) {
+        // Update existing row 2
+        const existingRow = rows[1] || [];
+        const updatedRow = [
+          existingRow[0] || '',
+          existingRow[1] || '',
+          existingRow[2] || '',
+          dueDate,
+          existingRow[4] || '',
+          existingRow[5] || '',
+          existingRow[6] || 'false',
+          existingRow[7] || 'false',
+          existingRow[8] || 'false',
+          existingRow[9] || 'false',
+        ];
+        return await this.updateSheet('Config', 'A2:J2', [updatedRow]);
+      } else {
+        // Only headers exist, append new row
+        const valuesRow = [
+          '',
+          '',
+          '',
+          dueDate,
+          '',
+          '',
+          'false',
+          'false',
+          'false',
+          'false',
+        ];
+        return await this.appendToSheet('Config', [valuesRow]);
+      }
+    } catch (error) {
+      console.error('Error saving due date:', error);
+      return {
+        success: false,
+        message: `Failed to save due date: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
 }
 
 // Export a singleton instance

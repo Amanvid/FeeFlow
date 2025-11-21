@@ -98,9 +98,21 @@ export default function TeacherStudentsPage() {
   };
 
   const getStatusColor = (balance: number) => {
-    if (balance <= 0) return 'bg-green-100 text-green-800';
-    if (balance > 0 && balance <= 100) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
+    if (balance <= 0) return 'bg-green-50 text-green-700 border-green-200';
+    if (balance > 0 && balance <= 100) return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+    return 'bg-red-50 text-red-700 border-red-200';
+  };
+
+  const getCardGradient = (balance: number) => {
+    if (balance <= 0) return 'bg-gradient-to-br from-green-25 to-green-50';
+    if (balance > 0 && balance <= 100) return 'bg-gradient-to-br from-yellow-25 to-yellow-50';
+    return 'bg-gradient-to-br from-red-25 to-red-50';
+  };
+
+  const getCardBorder = (balance: number) => {
+    if (balance <= 0) return 'border-green-200 hover:border-green-300';
+    if (balance > 0 && balance <= 100) return 'border-yellow-200 hover:border-yellow-300';
+    return 'border-red-200 hover:border-red-300';
   };
 
   if (isLoading) {
@@ -167,105 +179,106 @@ export default function TeacherStudentsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {students.map((student) => (
-              <div key={student.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+              <div key={student.id} className={`${getCardGradient(student.balance)} rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-6 border ${getCardBorder(student.balance)}`}>
                 {/* Student Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">
                       {student.name}
                     </h3>
                     <p className="text-sm text-gray-600">{student.class}</p>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(student.balance)}`}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(student.balance)}`}>
                     {student.balance <= 0 ? 'Paid' : 'Balance Due'}
                   </span>
                 </div>
 
                 {/* Fee Breakdown */}
                 <div className="space-y-2 mb-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Fee Breakdown</h4>
+                  <h4 className="text-sm font-medium text-gray-800 mb-2">Fee Breakdown</h4>
                   <div className="space-y-1 text-sm">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center bg-white/30 rounded px-3 py-2">
                       <span className="text-gray-600">Last Term Arrears:</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(student.feeBreakdown.lastTermArrears)}</span>
+                      <span className="font-medium text-gray-700">{formatCurrency(student.feeBreakdown.lastTermArrears)}</span>
                     </div>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center bg-white/30 rounded px-3 py-2">
                       <span className="text-gray-600">Current Term Fees:</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(student.feeBreakdown.currentTermFees)}</span>
+                      <span className="font-medium text-gray-700">{formatCurrency(student.feeBreakdown.currentTermFees)}</span>
                     </div>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center bg-white/30 rounded px-3 py-2">
                       <span className="text-gray-600">Books:</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(student.feeBreakdown.books)}</span>
+                      <span className="font-medium text-gray-700">{formatCurrency(student.feeBreakdown.books)}</span>
                     </div>
-                    <hr className="my-2" />
-                    <div className="flex justify-between items-center font-semibold">
-                      <span className="text-gray-900">Total Fees:</span>
-                      <span className="text-gray-900">{formatCurrency(student.totalFees)}</span>
+                    <div className="border-t border-gray-200 my-2" />
+                    <div className="flex justify-between items-center bg-white/50 rounded px-3 py-2 font-semibold">
+                      <span className="text-gray-800">Total Fees:</span>
+                      <span className="text-gray-800">{formatCurrency(student.totalFees)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Payment Breakdown */}
                 <div className="space-y-2 mb-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Amount Paid</h4>
+                  <h4 className="text-sm font-medium text-gray-800 mb-2">Amount Paid</h4>
                   <div className="space-y-1 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">- Fees:</span>
-                      <span className="font-medium text-green-600">{formatCurrency(student.paymentBreakdown.feesPaid)}</span>
+                    <div className="flex justify-between items-center bg-green-25/50 rounded px-3 py-2">
+                      <span className="text-gray-600">Fees:</span>
+                      <span className="font-medium text-green-700">{formatCurrency(student.paymentBreakdown.feesPaid)}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">- Books:</span>
-                      <span className="font-medium text-green-600">{formatCurrency(student.paymentBreakdown.booksPaid)}</span>
+                    <div className="flex justify-between items-center bg-green-25/50 rounded px-3 py-2">
+                      <span className="text-gray-600">Books:</span>
+                      <span className="font-medium text-green-700">{formatCurrency(student.paymentBreakdown.booksPaid)}</span>
                     </div>
-                    <hr className="my-2" />
-                    <div className="flex justify-between items-center font-semibold">
-                      <span className="text-gray-900">Total Paid:</span>
-                      <span className="text-green-600">{formatCurrency(student.amountPaid)}</span>
+                    <div className="border-t border-gray-200 my-2" />
+                    <div className="flex justify-between items-center bg-green-50/50 rounded px-3 py-2 font-semibold">
+                      <span className="text-gray-800">Total Paid:</span>
+                      <span className="text-green-700">{formatCurrency(student.amountPaid)}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Balance & Due Date */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Balance:</span>
-                    <span className="text-sm font-medium text-red-600">{formatCurrency(student.balance)}</span>
+                {/* Balance and Due Date */}
+                <div className="space-y-3 mb-4">
+                  <div className="flex justify-between items-center bg-white/30 rounded-lg px-4 py-3 border-2 border-gray-200">
+                    <span className="text-lg font-bold text-gray-800">Balance:</span>
+                    <span className={`text-2xl font-bold ${student.balance <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(student.balance)}
+                    </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Due Date:</span>
-                    <span className="text-sm font-medium text-gray-900">{student.dueDate}</span>
+                  <div className="flex justify-between items-center bg-yellow-50 rounded-lg px-4 py-3 border-2 border-yellow-200">
+                    <span className="text-sm font-bold text-yellow-800">Due Date:</span>
+                    <span className="text-sm font-bold text-yellow-700">{student.dueDate}</span>
                   </div>
                 </div>
 
                 {/* Parent Information */}
-                <div className="border-t pt-4 space-y-2">
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Parent/Guardian Info</h4>
-                  <div className="text-sm text-gray-600">
-                    <p><strong>Name:</strong> {student.parentName}</p>
-                    <p><strong>Phone:</strong> {student.parentPhone}</p>
+                <div className="space-y-2 mb-4">
+                  <h4 className="text-sm font-medium text-gray-800 mb-2">Parent/Guardian Info</h4>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between items-center bg-gray-25/30 rounded px-3 py-2">
+                      <span className="text-gray-600">Name:</span>
+                      <span className="font-medium text-gray-700">{student.parentName}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-gray-25/30 rounded px-3 py-2">
+                      <span className="text-gray-600">Phone:</span>
+                      <span className="font-bold text-gray-700">{student.parentPhone}</span>
+                    </div>
                     {student.parentEmail && (
-                      <p><strong>Email:</strong> {student.parentEmail}</p>
+                      <div className="flex justify-between items-center bg-gray-25/30 rounded px-3 py-2">
+                        <span className="text-gray-600">Email:</span>
+                        <span className="font-medium text-gray-700">{student.parentEmail}</span>
+                      </div>
                     )}
-                    <p><strong>Location:</strong> {student.location}</p>
+                    <div className="flex justify-between items-center bg-gray-25/30 rounded px-3 py-2">
+                      <span className="text-gray-600">Location:</span>
+                      <span className="font-medium text-gray-700">{student.location}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Books Information - REMOVED to avoid duplication with Fee Breakdown */}
 
-                {/* Payment History */}
-                {student.payments && student.payments.length > 0 && (
-                  <div className="border-t pt-4 mt-4">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Recent Payments</h4>
-                    <div className="space-y-1">
-                      {student.payments.slice(-3).map((payment: any, index: number) => (
-                        <div key={index} className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600">{payment.date || 'Unknown date'}</span>
-                          <span className="text-green-600 font-medium">{formatCurrency(payment.amount || 0)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
               </div>
             ))}
           </div>

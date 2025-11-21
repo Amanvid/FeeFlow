@@ -1,7 +1,10 @@
 
 import { NextResponse } from 'next/server';
 import { verifyOtp } from '@/lib/actions';
-import { getAdminUsers } from '@/lib/data';
+import { getAdminUsers, getTeacherUsers } from '@/lib/data';
+import { encrypt } from '@/lib/session';
+import { cookies } from 'next/headers';
+import { TeacherUser } from '@/lib/definitions';
 
 export async function POST(req: Request) {
   try {
@@ -23,9 +26,19 @@ export async function POST(req: Request) {
         );
     }
     
-    // 2. Find user to return their details
+    // 2. Find user to return their details (check both admin and teacher users)
     const adminUsers = await getAdminUsers();
-    const user = adminUsers.find(u => u.username === username);
+    const teacherUsers = await getTeacherUsers();
+    
+    // Check if user is an admin
+    let user = adminUsers.find(u => u.username === username);
+    let userType = 'admin';
+    
+    // If not found in admin, check teachers
+    if (!user) {
+        user = teacherUsers.find(t => t.username === username);
+        userType = 'teacher';
+    }
 
     if (!user) {
          return NextResponse.json(
@@ -34,13 +47,35 @@ export async function POST(req: Request) {
         );
     }
 
-    // 3. Return a success response with user info (excluding password).
+    // 3. Create session for the user
+    const session = await encrypt({
+        username: user.username,
+        role: user.role,
+        userType: userType,
+        ...(userType === 'teacher' && { 
+            name: (user as TeacherUser).name,
+            class: (user as TeacherUser).class 
+        })
+    });
+
+    // 4. Set session cookie
+    const cookieStore = await cookies();
+    cookieStore.set('session', session, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24, // 24 hours
+        path: '/'
+    });
+
+    // 5. Return a success response with user info (excluding password).
     return NextResponse.json({ 
         success: true, 
         message: 'Login successful',
         user: {
             username: user.username,
             role: user.role,
+            userType: userType
         }
     });
 

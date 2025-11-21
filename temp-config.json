@@ -1,0 +1,10 @@
+{
+  "dueDate": "24 Nov. 2025",
+  "lastSync": "2025-11-21T07:48:34.584Z",
+  "notifications": {
+    "smsEnabled": true,
+    "feeRemindersEnabled": true,
+    "paymentNotificationsEnabled": true,
+    "admissionNotificationsEnabled": false
+  }
+}

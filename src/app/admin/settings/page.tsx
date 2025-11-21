@@ -68,6 +68,15 @@ export default function SettingsPage() {
     }
   };
 
+  const handleDueDateChange = (value: string) => {
+    if (config) {
+      setConfig({
+        ...config,
+        dueDate: value,
+      });
+    }
+  };
+
   const handleSave = async () => {
     if (!config) return;
 
@@ -78,7 +87,10 @@ export default function SettingsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ notifications: config.notifications }),
+        body: JSON.stringify({ 
+          dueDate: config.dueDate,
+          notifications: config.notifications 
+        }),
       });
 
       if (!response.ok) {
@@ -87,7 +99,7 @@ export default function SettingsPage() {
 
       toast({
         title: 'Settings Saved',
-        description: 'Notification settings have been updated successfully.',
+        description: 'Settings have been updated successfully.',
         className: 'bg-green-50 border-green-200',
       });
     } catch (err) {
@@ -133,6 +145,32 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Due Date Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Due Date Settings</CardTitle>
+            <CardDescription>
+              Set the due date for fee payments (e.g., "24 Nov. 2025")
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="due-date">Due Date</Label>
+              <input
+                id="due-date"
+                type="text"
+                value={config?.dueDate || ''}
+                onChange={(e) => handleDueDateChange(e.target.value)}
+                placeholder="24 Nov. 2025"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <p className="text-sm text-gray-500">
+                This date will appear on invoices and fee reminders
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Notification Settings */}
         <Card>
           <CardHeader>

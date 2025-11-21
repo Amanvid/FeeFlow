@@ -215,6 +215,11 @@ export default function LoginPage() {
                                 </Button>
                             </form>
                         </Form>
+                        <div className="mt-4 text-center">
+                            <Link href="/teacher/login" className="text-sm text-blue-600 hover:text-blue-800 underline">
+                                Teacher Portal Login
+                            </Link>
+                        </div>
                     </motion.div>
                 ) : (
                     <motion.div
