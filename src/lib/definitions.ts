@@ -14,7 +14,6 @@ export type Student = {
   gender: 'Male' | 'Female' | 'Other';
   guardianName?: string;
   guardianPhone?: string;
-  guardianLocation?: string;
 };
 
 export type SchoolConfig = {

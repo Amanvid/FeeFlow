@@ -45,7 +45,7 @@ export async function GET(
       parentName: student.guardianName, // Use guardianName from getAllStudents
       parentPhone: student.guardianPhone, // Use guardianPhone from getAllStudents
       parentEmail: '', // Not available in getAllStudents
-      location: student.guardianLocation || 'Not specified', // Use guardianLocation from getAllStudents
+      location: 'Not specified', // Not available in getAllStudents
       payments: [], // Not available in getAllStudents - would need separate sheet
       feeBreakdown: {
         lastTermArrears: student.arrears, // From ARREAS column

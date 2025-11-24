@@ -29,6 +29,7 @@ export default function TeacherClassesPage() {
       if (result.success) {
         setTeacherName(result.teacher.name);
       } else {
+        console.log('Failed to fetch teacher info, redirecting to login');
         // Redirect to login if not authenticated
         router.push('/teacher/login');
       }

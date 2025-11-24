@@ -31,6 +31,7 @@ export default function TeacherLayout({
       if (result.success) {
         setIsAuthenticated(true);
       } else {
+        console.log('Authentication failed, redirecting to login');
         router.push('/teacher/login');
       }
     } catch (error) {

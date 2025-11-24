@@ -3,9 +3,13 @@ import { verifySession } from '@/lib/session';
 
 export async function GET() {
   try {
+    console.log('Checking teacher session...');
     const session = await verifySession();
     
+    console.log('Session verification result:', session);
+    
     if (!session || session.userType !== 'teacher') {
+      console.log('Session invalid or not a teacher:', session?.userType);
       return NextResponse.json(
         { success: false, message: 'Unauthorized' },
         { status: 401 }

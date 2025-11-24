@@ -4,7 +4,7 @@ import { verifyOtp } from '@/lib/actions';
 import { getAdminUsers, getTeacherUsers } from '@/lib/data';
 import { encrypt } from '@/lib/session';
 import { cookies } from 'next/headers';
-import { TeacherUser } from '@/lib/definitions';
+import { TeacherUser, AdminUser } from '@/lib/definitions';
 
 export async function POST(req: Request) {
   try {
@@ -30,14 +30,21 @@ export async function POST(req: Request) {
     const adminUsers = await getAdminUsers();
     const teacherUsers = await getTeacherUsers();
     
-    // Check if user is an admin
-    let user = adminUsers.find(u => u.username === username);
-    let userType = 'admin';
+    console.log('Teacher users found:', teacherUsers.length);
+    console.log('Admin users found:', adminUsers.length);
+    console.log('Looking for username:', username);
     
-    // If not found in admin, check teachers
+    // Check if user is a teacher first
+    let user: TeacherUser | AdminUser | undefined = teacherUsers.find(t => t.username === username);
+    let userType = 'teacher';
+    
+    console.log('Found in teachers:', !!user);
+    
+    // If not found in teachers, check admin
     if (!user) {
-        user = teacherUsers.find(t => t.username === username);
-        userType = 'teacher';
+        user = adminUsers.find(u => u.username === username);
+        userType = 'admin';
+        console.log('Found in admin:', !!user);
     }
 
     if (!user) {
@@ -65,7 +72,8 @@ export async function POST(req: Request) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60 * 24, // 24 hours
-        path: '/'
+        path: '/',
+        domain: process.env.NODE_ENV === 'production' ? undefined : undefined
     });
 
     // 5. Return a success response with user info (excluding password).

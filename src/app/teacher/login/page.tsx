@@ -133,7 +133,11 @@ export default function TeacherLoginPage() {
       if (!res.ok || !data.success) throw new Error(data.message);
       
       toast({ title: 'Login Successful', description: 'Redirecting to dashboard...' });
-      window.location.href = '/teacher/classes';
+      
+      // Add a small delay to ensure cookie is set properly
+      setTimeout(() => {
+        window.location.href = '/teacher/classes';
+      }, 500);
     } catch (error: any) {
       toast({
         variant: 'destructive',
