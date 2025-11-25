@@ -6,7 +6,6 @@ import {
   BookOpenCheck,
   Home,
   LogOut,
-  PanelLeft,
   Users,
   Settings,
   FileText,
@@ -15,7 +14,6 @@ import {
   FileEdit,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,13 +22,21 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -65,232 +71,138 @@ export default function AdminLayout({
   const userInitial = user?.username ? user.username.charAt(0).toUpperCase() : 'A';
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
-        <TooltipProvider>
-          <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
-            <Link
-              href="/"
-              className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
-            >
-              <BookOpenCheck className="h-4 w-4 transition-all group-hover:scale-110" />
-              <span className="sr-only">FeeFlow</span>
-            </Link>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/admin"
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8",
-                    pathname === "/admin" && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <Home className="h-5 w-5" />
-                  <span className="sr-only">Dashboard</span>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Dashboard</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/admin/students"
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8",
-                    pathname === "/admin/students" && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <Users className="h-5 w-5" />
-                  <span className="sr-only">Students</span>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Students</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/admin/settings"
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8",
-                    pathname === "/admin/settings" && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <Settings className="h-5 w-5" />
-                  <span className="sr-only">Settings</span>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Settings</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/admin/admissions"
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8",
-                    pathname === "/admin/admissions" && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <UserPlus className="h-5 w-5" />
-                  <span className="sr-only">Admissions</span>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Admissions</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/admin/books"
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8",
-                    pathname === "/admin/books" && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <Book className="h-5 w-5" />
-                  <span className="sr-only">Books Dashboard</span>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Books Dashboard</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/admin/data-entry"
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8",
-                    pathname === "/admin/data-entry" && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <FileEdit className="h-5 w-5" />
-                  <span className="sr-only">Data Entry</span>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Data Entry</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/admin/print-notices"
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8",
-                    pathname === "/admin/print-notices" && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <FileText className="h-5 w-5" />
-                  <span className="sr-only">Print Notices</span>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Print Notices</TooltipContent>
-            </Tooltip>
-          </nav>
-          <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleLogout}
-                  variant="ghost"
-                  size="icon"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-                >
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full flex-col bg-muted/40">
+        <Sidebar className="border-r bg-background" variant="inset">
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link
+                    href="/"
+                    className="flex items-center gap-2"
+                  >
+                    <BookOpenCheck className="h-4 w-4" />
+                    <span className="font-semibold">FeeFlow</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        href="/admin"
+                        className={cn(
+                          pathname === "/admin" && "bg-accent text-accent-foreground"
+                        )}
+                      >
+                        <Home className="h-5 w-5" />
+                        <span>Dashboard</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        href="/admin/students"
+                        className={cn(
+                          pathname === "/admin/students" && "bg-accent text-accent-foreground"
+                        )}
+                      >
+                        <Users className="h-5 w-5" />
+                        <span>Students</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        href="/admin/admissions"
+                        className={cn(
+                          pathname === "/admin/admissions" && "bg-accent text-accent-foreground"
+                        )}
+                      >
+                        <UserPlus className="h-5 w-5" />
+                        <span>Admissions</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        href="/admin/books"
+                        className={cn(
+                          pathname === "/admin/books" && "bg-accent text-accent-foreground"
+                        )}
+                      >
+                        <Book className="h-5 w-5" />
+                        <span>Books Dashboard</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        href="/admin/data-entry"
+                        className={cn(
+                          pathname === "/admin/data-entry" && "bg-accent text-accent-foreground"
+                        )}
+                      >
+                        <FileEdit className="h-5 w-5" />
+                        <span>Data Entry</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        href="/admin/print-notices"
+                        className={cn(
+                          pathname === "/admin/print-notices" && "bg-accent text-accent-foreground"
+                        )}
+                      >
+                        <FileText className="h-5 w-5" />
+                        <span>Print Notices</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        href="/admin/settings"
+                        className={cn(
+                          pathname === "/admin/settings" && "bg-accent text-accent-foreground"
+                        )}
+                      >
+                        <Settings className="h-5 w-5" />
+                        <span>Settings</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout}>
                   <LogOut className="h-5 w-5" />
-                  <span className="sr-only">Logout</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Logout</TooltipContent>
-            </Tooltip>
-          </nav>
-        </TooltipProvider>
-      </aside>
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button size="icon" variant="outline" className="sm:hidden">
-                <PanelLeft className="h-5 w-5" />
-                <span className="sr-only">Toggle Menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="sm:max-w-xs">
-              <nav className="grid gap-6 text-lg font-medium">
-                <Link
-                  href="/"
-                  className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
-                >
-                  <BookOpenCheck className="h-5 w-5 transition-all group-hover:scale-110" />
-                  <span className="sr-only">FeeFlow</span>
-                </Link>
-                <Link
-                  href="/admin"
-                  className={cn(
-                    "flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground",
-                    pathname === "/admin" && "text-foreground"
-                  )}
-                >
-                  <Home className="h-5 w-5" />
-                  Dashboard
-                </Link>
-                <Link
-                  href="/admin/students"
-                  className={cn(
-                    "flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground",
-                    pathname === "/admin/students" && "text-foreground"
-                  )}
-                >
-                  <Users className="h-5 w-5" />
-                  Students
-                </Link>
-                <Link
-                  href="/admin/admissions"
-                  className={cn(
-                    "flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground",
-                    pathname === "/admin/admissions" && "text-foreground"
-                  )}
-                >
-                  <UserPlus className="h-5 w-5" />
-                  Admissions
-                </Link>
-                <Link
-                  href="/admin/settings"
-                  className={cn(
-                    "flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground",
-                    pathname === "/admin/settings" && "text-foreground"
-                  )}
-                >
-                  <Settings className="h-5 w-5" />
-                  Settings
-                </Link>
-                <Link
-                  href="/admin/books"
-                  className={cn(
-                    "flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground",
-                    pathname === "/admin/books" && "text-foreground"
-                  )}
-                >
-                  <Book className="h-5 w-5" />
-                  Books Dashboard
-                </Link>
-                <Link
-                  href="/admin/data-entry"
-                  className={cn(
-                    "flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground",
-                    pathname === "/admin/data-entry" && "text-foreground"
-                  )}
-                >
-                  <FileEdit className="h-5 w-5" />
-                  Data Entry
-                </Link>
-                <Link
-                  href="/admin/print-notices"
-                  className={cn(
-                    "flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground",
-                    pathname === "/admin/print-notices" && "text-foreground"
-                  )}
-                >
-                  <FileText className="h-5 w-5" />
-                  Print Notices
-                </Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <SidebarTrigger className="sm:hidden" />
            <h1 className="text-xl font-semibold">
              {pathname === '/admin' && 'Dashboard'}
              {pathname === '/admin/students' && 'Students'}
@@ -338,5 +250,6 @@ export default function AdminLayout({
         </main>
       </div>
     </div>
+    </SidebarProvider>
   );
 }
