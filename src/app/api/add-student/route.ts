@@ -11,13 +11,8 @@ export async function POST(request: NextRequest) {
       gender,
       guardianName,
       guardianPhone,
-      totalBalance,
-      arrears,
-      booksFees,
       schoolFeesAmount,
       initialAmountPaid,
-      payment,
-      booksFeesPayment,
     } = body;
 
     // Validate required fields
@@ -111,16 +106,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate total balance if not provided
-    const calculatedTotalBalance = totalBalance || 
-      (arrears + booksFees + schoolFeesAmount - initialAmountPaid - payment - booksFeesPayment);
-
+    // Get the current row number for formula references
+    const currentRow = insertRowIndex > 0 ? insertRowIndex + 1 : currentData.length + 2; // +1 for 1-based indexing, +1 for header row
+    
+    console.log('Headers found:', headers);
+    console.log('Current row number:', currentRow);
+    console.log('Grade column index:', headers.findIndex(h => h.toLowerCase().includes('grade')));
+    console.log('Student type column index:', headers.findIndex(h => h.toLowerCase().includes('student type')));
+    
     // Prepare the new student data row based on actual sheet structure
     const newStudentRow = new Array(headers.length).fill('');
     
     // Map data to correct columns based on headers
     headers.forEach((header, index) => {
       const headerLower = header.toLowerCase();
+      const colLetter = String.fromCharCode(65 + index); // A, B, C, etc.
       
       if (headerLower.includes('no.')) {
         newStudentRow[index] = nextStudentNumber.toString();
@@ -131,23 +131,87 @@ export async function POST(request: NextRequest) {
       } else if (headerLower.includes('grade')) {
         newStudentRow[index] = grade;
       } else if (headerLower.includes('student type')) {
-        newStudentRow[index] = studentType || 'New';
+        newStudentRow[index] = 'New'; // Always set to New
       } else if (headerLower.includes('school fees amount')) {
-        newStudentRow[index] = (schoolFeesAmount || 0).toFixed(2);
-      } else if (headerLower.includes('arreas')) {
-        newStudentRow[index] = (arrears || 0).toFixed(2);
+        // Insert VLOOKUP formula for school fees based on class and student type
+        const gradeCol = headers.findIndex(h => h.toLowerCase().includes('grade'));
+        const studentTypeCol = headers.findIndex(h => h.toLowerCase().includes('student type'));
+        const gradeLetter = String.fromCharCode(65 + gradeCol);
+        const studentTypeLetter = String.fromCharCode(65 + studentTypeCol);
+        
+        // Determine the appropriate table based on grade
+        let tableName = 'CrecheTbl';
+        const gradeLower = grade.toLowerCase();
+        
+        console.log('Grade being processed:', grade, 'Grade lower:', gradeLower);
+        
+        if (gradeLower.includes('creche')) {
+          tableName = 'CrecheTbl';
+          console.log('Matched Creche pattern');
+        } else if (gradeLower.includes('n ') && grade.includes('&')) {
+          tableName = 'NurseryTbl';
+          console.log('Matched N & pattern');
+        } else if (gradeLower.includes('kg')) {
+          tableName = 'NurseryTbl';
+          console.log('Matched KG pattern');
+        } else if (gradeLower.includes('bs')) {
+          tableName = 'Nurs';
+          console.log('Matched BS pattern');
+        }
+        
+        console.log('Selected table name:', tableName);
+        
+        const formula = `=IFERROR(VLOOKUP(${gradeLetter}${currentRow}&${studentTypeLetter}${currentRow},${tableName},4,0),"")`;
+        console.log('School fees formula:', formula);
+        console.log('Grade letter:', gradeLetter, 'Student type letter:', studentTypeLetter);
+        newStudentRow[index] = formula;
+      } else if (headerLower.includes('books fees') && !headerLower.includes('payment')) {
+        // Insert VLOOKUP formula for books fees based on class and student type
+        const gradeCol = headers.findIndex(h => h.toLowerCase().includes('grade'));
+        const studentTypeCol = headers.findIndex(h => h.toLowerCase().includes('student type'));
+        const gradeLetter = String.fromCharCode(65 + gradeCol);
+        const studentTypeLetter = String.fromCharCode(65 + studentTypeCol);
+        
+        // Determine the appropriate table based on grade (same as school fees)
+        let tableName = 'CrecheTbl';
+        const gradeLower = grade.toLowerCase();
+        
+        if (gradeLower.includes('creche')) {
+          tableName = 'CrecheTbl';
+        } else if (gradeLower.includes('n ') && grade.includes('&')) {
+          tableName = 'NurseryTbl';
+        } else if (gradeLower.includes('kg')) {
+          tableName = 'NurseryTbl';
+        } else if (gradeLower.includes('bs')) {
+          tableName = 'Nurs';
+        }
+        
+        console.log('Books fees table name:', tableName);
+        
+        const booksFormula = `=IFERROR(VLOOKUP(${gradeLetter}${currentRow}&${studentTypeLetter}${currentRow},${tableName},4,0),"")`;
+        console.log('Books fees formula:', booksFormula);
+        newStudentRow[index] = booksFormula;
       } else if (headerLower.includes('intial amount paid')) {
         newStudentRow[index] = (initialAmountPaid || 0).toFixed(2);
-      } else if (headerLower.includes('payment')) {
-        newStudentRow[index] = (payment || 0).toFixed(2);
-      } else if (headerLower.includes('remaining balance')) {
-        newStudentRow[index] = (calculatedTotalBalance || 0).toFixed(2);
-      } else if (headerLower.includes('books fees') && !headerLower.includes('payment')) {
-        newStudentRow[index] = (booksFees || 0).toFixed(2);
-      } else if (headerLower.includes('books fees payment')) {
-        newStudentRow[index] = (booksFeesPayment || 0).toFixed(2);
+      } else if (headerLower.includes('arreas') || headerLower.includes('arrears')) {
+        // Leave arrears blank for new students - do not insert any value
+        // newStudentRow[index] = '0'; // Commented out to leave blank
       } else if (headerLower.includes('total balance')) {
-        newStudentRow[index] = (calculatedTotalBalance || 0).toFixed(2);
+        // Insert formula: =SchoolFees-InitialPaid (arrears is blank for new students)
+        const schoolFeesCol = headers.findIndex(h => h.toLowerCase().includes('school fees amount'));
+        const initialPaidCol = headers.findIndex(h => h.toLowerCase().includes('intial amount paid'));
+        const schoolFeesLetter = String.fromCharCode(65 + schoolFeesCol);
+        const initialPaidLetter = String.fromCharCode(65 + initialPaidCol);
+        newStudentRow[index] = `=${schoolFeesLetter}${currentRow}-${initialPaidLetter}${currentRow}`;
+      } else if (headerLower.includes('remaining balance')) {
+        // Insert formula: =BooksFees-SchoolFees-InitialPaid (arrears is blank for new students)
+        const booksFeesCol = headers.findIndex(h => h.toLowerCase().includes('books fees') && !h.toLowerCase().includes('payment'));
+        const schoolFeesCol = headers.findIndex(h => h.toLowerCase().includes('school fees amount'));
+        const initialPaidCol = headers.findIndex(h => h.toLowerCase().includes('intial amount paid'));
+        const booksFeesLetter = String.fromCharCode(65 + booksFeesCol);
+        const schoolFeesLetter = String.fromCharCode(65 + schoolFeesCol);
+        const initialPaidLetter = String.fromCharCode(65 + initialPaidCol);
+        newStudentRow[index] = `=${booksFeesLetter}${currentRow}-${schoolFeesLetter}${currentRow}-${initialPaidLetter}${currentRow}`;
       } else if (headerLower.includes('parent name') || headerLower.includes('guardian name')) {
         newStudentRow[index] = guardianName;
       } else if (headerLower.includes('contact') || headerLower.includes('phone')) {

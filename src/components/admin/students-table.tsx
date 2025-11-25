@@ -166,8 +166,8 @@ export default function StudentsTable({ students }: { students: Student[] }) {
             </TableHeader>
             <TableBody>
               {paginatedStudents.length > 0 ? (
-                paginatedStudents.map((student) => (
-                  <TableRow key={student.id}>
+                paginatedStudents.map((student, index) => (
+                  <TableRow key={`${student.id}-${index}`}>
                     <TableCell>
                       <div className="font-medium">{student.studentName}</div>
                       <div className="hidden text-sm text-muted-foreground md:inline">

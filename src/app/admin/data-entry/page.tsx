@@ -17,13 +17,8 @@ interface StudentFormData {
   gender: 'Male' | 'Female' | 'Other';
   guardianName: string;
   guardianPhone: string;
-  totalBalance: number;
-  arrears: number;
-  booksFees: number;
   schoolFeesAmount: number;
   initialAmountPaid: number;
-  payment: number;
-  booksFeesPayment: number;
 }
 
 interface PaymentFormData {
@@ -57,13 +52,8 @@ export default function DataEntryPage() {
     gender: 'Male',
     guardianName: '',
     guardianPhone: '',
-    totalBalance: 0,
-    arrears: 0,
-    booksFees: 0,
     schoolFeesAmount: 0,
     initialAmountPaid: 0,
-    payment: 0,
-    booksFeesPayment: 0,
   });
   
   const [paymentForm, setPaymentForm] = useState<PaymentFormData>({
@@ -114,6 +104,15 @@ export default function DataEntryPage() {
 
     fetchClasses();
   }, []);
+
+  // Auto-set school fees amount when class is selected
+  useEffect(() => {
+    if (studentForm.grade) {
+      // This will be handled by the API using VLOOKUP formula
+      // For now, we keep the field editable but it will be overridden by formula
+      console.log('Class selected:', studentForm.grade, '- Fees will be calculated by VLOOKUP formula');
+    }
+  }, [studentForm.grade]);
 
   // Fetch students when class is selected
   const fetchStudentsByClass = async (selectedClass: string) => {
@@ -201,13 +200,8 @@ export default function DataEntryPage() {
           gender: 'Male',
           guardianName: '',
           guardianPhone: '',
-          totalBalance: 0,
-          arrears: 0,
-          booksFees: 0,
           schoolFeesAmount: 0,
           initialAmountPaid: 0,
-          payment: 0,
-          booksFeesPayment: 0,
         });
       } else {
         setStudentMessage({ type: 'error', message: result.message || 'Failed to add student' });
@@ -335,18 +329,15 @@ export default function DataEntryPage() {
 
                 <div>
                   <Label htmlFor="studentType">Student Type</Label>
-                  <Select
-                    value={studentForm.studentType}
-                    onValueChange={(value: 'New' | 'Old') => setStudentForm({ ...studentForm, studentType: value })}
-                  >
-                    <SelectTrigger id="studentType">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="New">New Student</SelectItem>
-                      <SelectItem value="Old">Old Student</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    id="studentType"
+                    value="New Student"
+                    readOnly
+                    disabled
+                    className="bg-gray-100 cursor-not-allowed"
+                  />
+                  {/* Hidden input to maintain form data */}
+                  <input type="hidden" value="New" />
                 </div>
 
                 <div>
@@ -389,39 +380,18 @@ export default function DataEntryPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="booksFees">Books Fees (GH₵)</Label>
-                  <Input
-                    id="booksFees"
-                    type="number"
-                    step="0.01"
-                    value={studentForm.booksFees}
-                    onChange={(e) => setStudentForm({ ...studentForm, booksFees: parseFloat(e.target.value) || 0 })}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="schoolFeesAmount">School Fees (GH₵)</Label>
+                  <Label htmlFor="schoolFeesAmount">School Fees (GH₵) - Auto-calculated</Label>
                   <Input
                     id="schoolFeesAmount"
                     type="number"
                     step="0.01"
                     value={studentForm.schoolFeesAmount}
-                    onChange={(e) => setStudentForm({ ...studentForm, schoolFeesAmount: parseFloat(e.target.value) || 0 })}
-                    placeholder="0.00"
+                    readOnly
+                    disabled
+                    className="bg-gray-100 cursor-not-allowed"
+                    placeholder="Calculated by VLOOKUP formula"
                   />
-                </div>
-
-                <div>
-                  <Label htmlFor="arrears">Arrears (GH₵)</Label>
-                  <Input
-                    id="arrears"
-                    type="number"
-                    step="0.01"
-                    value={studentForm.arrears}
-                    onChange={(e) => setStudentForm({ ...studentForm, arrears: parseFloat(e.target.value) || 0 })}
-                    placeholder="0.00"
-                  />
+                  <p className="text-xs text-gray-500 mt-1">This will be calculated by VLOOKUP formula based on class selection</p>
                 </div>
 
                 <div>
@@ -432,30 +402,6 @@ export default function DataEntryPage() {
                     step="0.01"
                     value={studentForm.initialAmountPaid}
                     onChange={(e) => setStudentForm({ ...studentForm, initialAmountPaid: parseFloat(e.target.value) || 0 })}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="payment">Additional Payment (GH₵)</Label>
-                  <Input
-                    id="payment"
-                    type="number"
-                    step="0.01"
-                    value={studentForm.payment}
-                    onChange={(e) => setStudentForm({ ...studentForm, payment: parseFloat(e.target.value) || 0 })}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="booksFeesPayment">Books Payment (GH₵)</Label>
-                  <Input
-                    id="booksFeesPayment"
-                    type="number"
-                    step="0.01"
-                    value={studentForm.booksFeesPayment}
-                    onChange={(e) => setStudentForm({ ...studentForm, booksFeesPayment: parseFloat(e.target.value) || 0 })}
                     placeholder="0.00"
                   />
                 </div>

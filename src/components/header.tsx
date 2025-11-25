@@ -32,8 +32,7 @@ export function Header() {
             </Button>
             <Button asChild variant="outline" size="icon">
                 <Link href="/login" aria-label="Admin Login">
-                    <UserCog className="h-5 w-5" />
-                </Link>
+                    <UserCog className="h-10 w-10"/>AD</Link>
             </Button>
         </div>
       </div>
