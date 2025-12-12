@@ -2,8 +2,9 @@
 
 "use server";
 
-import type { Student, SchoolConfig, PhoneClaim, InvoiceGenerationClaim, AdminUser, TeacherUser } from './definitions';
+import type { Student, SchoolConfig, PhoneClaim, InvoiceGenerationClaim, AdminUser, TeacherUser, NonTeacherUser, SBARecord, SBASummary, TeacherUserWithPassword, AdminUserWithPassword } from './definitions';
 import { PlaceHolderImages } from './placeholder-images';
+import { GoogleSheetsService } from './google-sheets';
 
 const SPREADSHEET_ID = process.env.NEXT_PUBLIC_SPREADSHEET_ID || '1WHkw5YaVbnHjWD2nwTcYnQfIYV7PxascjEzY7FqL4Ew';
 
@@ -12,6 +13,66 @@ const VERBOSE_LOGGING = process.env.VERCEL || process.env.NODE_ENV === 'developm
 
 
 
+
+// Helper function to parse teacher CSV data (with headers)
+function parseTeacherCsv(csv: string): any[] {
+  const lines = csv.trim().split('\n');
+  if (lines.length === 0) return [];
+
+  const objects = [];
+  
+  // Skip the header row (first line) and process data rows
+  for (let i = 1; i < lines.length; i++) {
+    const obj: { [key: string]: string } = {};
+    // Split by comma only if it's not enclosed in quotes
+    const currentline = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+
+    // Map actual column headers to expected field names
+    obj['Name'] = (currentline[0] || '').replace(/"/g, '').trim();
+    obj['Class'] = (currentline[1] || '').replace(/"/g, '').trim();
+    obj['Role'] = (currentline[2] || '').replace(/"/g, '').trim(); // "Teacher" column maps to "Role"
+    obj['Status'] = (currentline[3] || '').replace(/"/g, '').trim(); // "Active" column maps to "Status"
+    obj['Username'] = (currentline[4] || '').replace(/"/g, '').trim();
+    obj['Password'] = (currentline[5] || '').replace(/"/g, '').trim();
+    obj['Contact'] = (currentline[6] || '').replace(/"/g, '').trim();
+    obj['Location'] = (currentline[7] || '').replace(/"/g, '').trim(); // "Locationed" column maps to "Location"
+    obj['Employment Date'] = (currentline[8] || '').replace(/"/g, '').trim();
+    obj['Date Stopped'] = (currentline[9] || '').replace(/"/g, '').trim();
+    
+    objects.push(obj);
+  }
+  return objects;
+}
+
+// Helper function to parse non-teacher CSV data (no headers, fixed column order)
+function parseNonTeacherCsv(csv: string): any[] {
+  const lines = csv.trim().split('\n');
+  if (lines.length === 0) return [];
+
+  const objects = [];
+  // Expected column order: Name, Department, Role, Status, Username, Password, Contact, Location, DateCreated, DateUpdated
+  
+  for (let i = 0; i < lines.length; i++) {
+    const obj: { [key: string]: string } = {};
+    // Split by comma only if it's not enclosed in quotes
+    const currentline = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+
+    // Map to expected field names based on column position
+    obj['Name'] = (currentline[0] || '').replace(/"/g, '').trim();
+    obj['Department'] = (currentline[1] || '').replace(/"/g, '').trim();
+    obj['Role'] = (currentline[2] || '').replace(/"/g, '').trim();
+    obj['Status'] = (currentline[3] || '').replace(/"/g, '').trim();
+    obj['Username'] = (currentline[4] || '').replace(/"/g, '').trim();
+    obj['Password'] = (currentline[5] || '').replace(/"/g, '').trim();
+    obj['Contact'] = (currentline[6] || '').replace(/"/g, '').trim();
+    obj['Location'] = (currentline[7] || '').replace(/"/g, '').trim();
+    obj['Date created'] = (currentline[8] || '').replace(/"/g, '').trim();
+    obj['Date updated'] = (currentline[9] || '').replace(/"/g, '').trim();
+    
+    objects.push(obj);
+  }
+  return objects;
+}
 
 // Helper function to parse CSV text into an array of objects
 function csvToObjects(csv: string): any[] {
@@ -368,9 +429,7 @@ export async function getAllStudents(): Promise<Student[]> {
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            if (VERBOSE_LOGGING) {
-                console.log(`Fetching students from Google Sheets (attempt ${attempt}/${maxRetries}): ${SPREADSHEET_ID}`);
-            }
+            console.log(`Fetching students from Google Sheets (attempt ${attempt}/${maxRetries}): ${SPREADSHEET_ID}`);
             
             const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Metadata`;
             
@@ -385,9 +444,7 @@ export async function getAllStudents(): Promise<Student[]> {
             
             clearTimeout(timeoutId);
             
-            if (VERBOSE_LOGGING) {
-                console.log(`Students sheet response status: ${response.status}`);
-            }
+            console.log(`Students sheet response status: ${response.status}`);
             
              if (!response.ok) {
                 throw new Error(`Failed to fetch students sheet: ${response.statusText}`);
@@ -395,11 +452,12 @@ export async function getAllStudents(): Promise<Student[]> {
             const csvText = await response.text();
             const studentData = csvToObjects(csvText);
             
-            if (VERBOSE_LOGGING) {
-                console.log(`Students sheet data rows: ${studentData.length}`);
-            }
+            console.log(`Students sheet data rows: ${studentData.length}`);
 
-            if (studentData.length === 0) return [];
+            if (studentData.length === 0) {
+                console.log('No student data found in sheet');
+                return [];
+            }
             
             const students = studentData.map((s, index) => {
                 // Use 'Total Balance' from the sheet as the source of truth for the balance.
@@ -426,10 +484,10 @@ export async function getAllStudents(): Promise<Student[]> {
                     gender = 'Female';
                 }
                 
-                // Create unique ID to avoid duplicates - use row number + student name hash
+                // Create unique ID to avoid duplicates - use row number + student name hash + index
                 const rowNumber = s['No.'] || (index + 1).toString();
-                const nameHash = s['NAME'] ? s['NAME'].replace(/\s+/g, '').toLowerCase().substring(0, 10) : '';
-                const uniqueId = `${rowNumber}-${nameHash || index}`;
+                const nameHash = s['NAME'] ? s['NAME'].replace(/\s+/g, '').toLowerCase().substring(0, 15) : '';
+                const uniqueId = `${rowNumber}-${nameHash}-${index}`;
                 
                 const student: Student = {
                     id: uniqueId,
@@ -450,6 +508,7 @@ export async function getAllStudents(): Promise<Student[]> {
                 return student;
             }).filter(s => s.studentName && s.class);
 
+            console.log(`Processed ${students.length} students from sheet`);
             return students;
             
         } catch(error) {
@@ -482,8 +541,18 @@ export async function getClasses(): Promise<string[]> {
 }
 
 export async function getStudentsByClass(className: string): Promise<Student[]> {
+  console.log(`getStudentsByClass called with className: "${className}"`);
   const allStudents = await getAllStudents();
-  const filteredStudents = allStudents.filter(s => s.class === className);
+  console.log(`Total students fetched: ${allStudents.length}`);
+  console.log('Sample student classes:', allStudents.slice(0, 3).map(s => s.class));
+  
+  const filteredStudents = allStudents.filter(s => {
+    const matches = s.class.trim() === className.trim();
+    console.log(`Student ${s.studentName} class "${s.class.trim()}" matches "${className.trim()}": ${matches}`);
+    return matches;
+  });
+  
+  console.log(`Filtered students for class "${className}": ${filteredStudents.length}`);
   return filteredStudents;
 }
 
@@ -691,47 +760,64 @@ export async function getAllClaims(): Promise<PhoneClaim[]> {
 
 export async function getTeacherUsers(): Promise<TeacherUser[]> {
     const maxRetries = 3;
-    const timeoutMs = 30000; // 30 seconds timeout
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             if (VERBOSE_LOGGING) {
-                console.log(`Fetching teachers from Google Sheets (attempt ${attempt}/${maxRetries}): ${SPREADSHEET_ID}`);
+                console.log(`Fetching teachers from Google Sheets API (attempt ${attempt}/${maxRetries}): ${SPREADSHEET_ID}`);
             }
             
-            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Teachers`;
+            // Use Google Sheets API instead of CSV export
+            const sheetsService = new GoogleSheetsService();
+            const result = await sheetsService.getSheetData('Teachers');
             
-            // Create abort controller for timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-            
-            const response = await fetch(url, { 
-                next: { revalidate: 60 },
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                throw new Error(`Failed to fetch Teachers sheet: ${response.statusText}`);
+            if (!result.success || !result.data || result.data.length === 0) {
+                console.warn('No teacher data found in Google Sheets');
+                return [];
             }
             
-            const csvText = await response.text();
-            const teacherData = csvToObjects(csvText);
+            const rows = result.data;
+            
+            // Skip header row and process data rows
+            const teacherData = [];
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const obj: { [key: string]: string } = {};
+                
+                // Map actual column headers to expected field names
+                obj['Name'] = (row[0] || '').toString().trim();
+                obj['Class'] = (row[1] || '').toString().trim();
+                obj['Role'] = (row[2] || '').toString().trim(); // "Teacher" column maps to "Role"
+                obj['Status'] = (row[3] || '').toString().trim(); // "Active" column maps to "Status"
+                obj['Username'] = (row[4] || '').toString().trim();
+                obj['Password'] = (row[5] || '').toString().trim();
+                obj['Contact'] = (row[6] || '').toString().trim();
+                obj['Location'] = (row[7] || '').toString().trim(); // "Locationed" column maps to "Location"
+                obj['Employment Date'] = (row[8] || '').toString().trim();
+                obj['Date Stopped'] = (row[9] || '').toString().trim();
+                
+                teacherData.push(obj);
+            }
 
             if (teacherData.length === 0) return [];
             
             const teachers: TeacherUser[] = teacherData.map(t => ({
-                name: t['Teacher Name'] || t['Name'] || '',
+                id: t['Username'] || '',
+                name: t['Name'] || t['Teacher Name'] || '',
                 class: t['Class'] || '',
                 role: t['Role'] || '',
-                status: t['Status'] || '',
+                status: ((t['Status'] || '').toLowerCase() === 'active' ? 'active' : 'inactive') as 'active' | 'inactive',
                 username: t['Username'] || '',
-                password: t['Password'] || ''
-            })).filter(t => t.username && t.password && t.status.toLowerCase() === 'active');
+                email: '',
+                phone: '',
+                contact: t['Contact'] || '',
+                location: t['Location'] || '',
+                employmentDate: t['Employment Date'] || t['Employement Dated'] || '',
+                dateStopped: t['Date Stopped'] || ''
+            })).filter(t => t.username);
 
             if (VERBOSE_LOGGING) {
-                console.log(`Successfully fetched ${teachers.length} active teachers`);
+                console.log(`Successfully fetched ${teachers.length} teachers`);
             }
             
             return teachers;
@@ -754,7 +840,125 @@ export async function getTeacherUsers(): Promise<TeacherUser[]> {
     return [];
 }
 
-export async function getAdminUsers(): Promise<AdminUser[]> {
+export async function getTeacherLoginUsers(): Promise<TeacherUserWithPassword[]> {
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const sheetsService = new GoogleSheetsService();
+            const result = await sheetsService.getSheetData('Teachers');
+            if (!result.success || !result.data || result.data.length === 0) {
+                return [];
+            }
+            const rows = result.data;
+            const out: TeacherUserWithPassword[] = [];
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const username = (row[4] || '').toString().trim();
+                if (!username) continue;
+                out.push({
+                    username,
+                    password: (row[5] || '').toString().trim(),
+                    role: (row[2] || '').toString().trim(),
+                    name: (row[0] || '').toString().trim(),
+                    class: (row[1] || '').toString().trim(),
+                    status: ((row[3] || '').toString().trim().toLowerCase() === 'active') ? 'active' : 'inactive'
+                });
+            }
+            return out;
+        } catch (error) {
+            if (attempt === maxRetries) {
+                return [];
+            }
+            const waitTime = attempt * 2000;
+            await new Promise(r => setTimeout(r, waitTime));
+        }
+    }
+    return [];
+}
+
+export async function getNonTeacherUsers(): Promise<NonTeacherUser[]> {
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            if (VERBOSE_LOGGING) {
+                console.log(`Fetching non-teachers from Google Sheets API (attempt ${attempt}/${maxRetries}): ${SPREADSHEET_ID}`);
+            }
+            
+            // Use Google Sheets API instead of CSV export
+            const sheetsService = new GoogleSheetsService();
+            const result = await sheetsService.getSheetData('Non-Teaching');
+            
+            if (!result.success || !result.data || result.data.length === 0) {
+                console.warn('No non-teacher data found in Google Sheets');
+                return [];
+            }
+            
+            const rows = result.data;
+            
+            // Skip header row and process data rows
+            const nonTeacherData = [];
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const obj: { [key: string]: string } = {};
+                
+                // Map actual column headers to expected field names
+                obj['Name'] = (row[0] || '').toString().trim();
+                obj['Department'] = (row[1] || '').toString().trim();
+                obj['Role'] = (row[2] || '').toString().trim();
+                obj['Status'] = (row[3] || '').toString().trim();
+                obj['Username'] = (row[4] || '').toString().trim();
+                obj['Password'] = (row[5] || '').toString().trim();
+                obj['Contact'] = (row[6] || '').toString().trim();
+                obj['Location'] = (row[7] || '').toString().trim();
+                obj['Date created'] = (row[8] || '').toString().trim();
+                obj['Date updated'] = (row[9] || '').toString().trim();
+                
+                nonTeacherData.push(obj);
+            }
+
+            if (nonTeacherData.length === 0) return [];
+            
+            const nonTeachers: NonTeacherUser[] = nonTeacherData.map(t => ({
+                id: t['Username'] || '',
+                name: t['Name'] || '',
+                username: t['Username'] || '',
+                email: '',
+                phone: '',
+                department: t['Department'] || '',
+                role: t['Role'] || '',
+                status: ((t['Status'] || '').toLowerCase() === 'active' ? 'active' : 'inactive') as 'active' | 'inactive',
+                contact: t['Contact'] || '',
+                location: t['Location'] || '',
+                dateCreated: t['Date created'] || '',
+                dateUpdated: t['Date updated'] || ''
+            })).filter(t => t.username);
+
+            if (VERBOSE_LOGGING) {
+                console.log(`Successfully fetched ${nonTeachers.length} non-teachers`);
+            }
+            
+            return nonTeachers;
+            
+        } catch (error) {
+            console.error(`Error fetching non-teachers from Google Sheet (attempt ${attempt}/${maxRetries}):`, error);
+            
+            if (attempt === maxRetries) {
+                console.error("Max retries reached, returning empty non-teacher array");
+                return [];
+            }
+            
+            // Wait before retry (exponential backoff)
+            const waitTime = attempt * 2000; // 2s, 4s, 6s
+            console.log(`Retrying in ${waitTime}ms...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+    }
+    
+    return [];
+}
+
+export async function getAdminUsers(): Promise<AdminUserWithPassword[]> {
     const maxRetries = 3;
     const timeoutMs = 30000; // 30 seconds timeout
     
@@ -785,7 +989,7 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
 
             if (adminData.length === 0) return [];
             
-            const admins: AdminUser[] = adminData.map(a => ({
+            const admins: AdminUserWithPassword[] = adminData.map(a => ({
                 username: a['Username'] || '',
                 password: a['Password'] || '',
                 role: a['Role'] || '',
@@ -813,6 +1017,152 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
     }
     
     return [];
+}
+
+function gradeFromPercentage(p: number): string {
+  if (p >= 80) return 'A';
+  if (p >= 70) return 'B';
+  if (p >= 60) return 'C';
+  if (p >= 50) return 'D';
+  if (p >= 40) return 'E';
+  return 'F';
+}
+
+export async function getSBARecords(): Promise<SBARecord[]> {
+  try {
+    const sheetsService = new GoogleSheetsService();
+    const candidateNames = ['SBA', 'SBA Records', 'Assessments', 'SBA Sheet'];
+    let result = await sheetsService.getSheetData(candidateNames[0]);
+    if (!result.success || !result.data || result.data.length <= 1) {
+      for (let i = 1; i < candidateNames.length; i++) {
+        const alt = await sheetsService.getSheetData(candidateNames[i]);
+        if (alt.success && alt.data && alt.data.length > 1) {
+          result = alt;
+          break;
+        }
+      }
+    }
+    if (!result.success || !result.data) {
+      const headers = [
+        'ID','Student ID','Student Name','Class','Subject','Term','Academic Year','Assessment Type','Score','Total Marks','Percentage','Grade','Remarks','Date','Teacher ID','Teacher Name','Created At','Updated At'
+      ];
+      const created = await sheetsService.createSheet('SBA');
+      if (created.success) {
+        await sheetsService.appendToSheet('SBA', [headers]);
+        const retry = await sheetsService.getSheetData('SBA');
+        result = retry;
+      } else {
+        return [];
+      }
+    } else if (result.data.length === 0) {
+      const headers = [
+        'ID','Student ID','Student Name','Class','Subject','Term','Academic Year','Assessment Type','Score','Total Marks','Percentage','Grade','Remarks','Date','Teacher ID','Teacher Name','Created At','Updated At'
+      ];
+      await sheetsService.appendToSheet('SBA', [headers]);
+      const retry = await sheetsService.getSheetData('SBA');
+      result = retry;
+    }
+    if (!result.data || result.data.length <= 1) return [];
+    const rows = result.data;
+    const headers: string[] = rows[0].map((h: unknown) => (h ? String(h).trim().toLowerCase() : ''));
+    const getIndex = (name: string) => headers.findIndex((h: string) => h === name.toLowerCase());
+    const idx = {
+      id: getIndex('id'),
+      studentId: getIndex('student id'),
+      studentName: getIndex('student name'),
+      className: getIndex('class'),
+      subject: getIndex('subject'),
+      term: getIndex('term'),
+      academicYear: getIndex('academic year'),
+      assessmentType: getIndex('assessment type'),
+      score: getIndex('score'),
+      totalMarks: getIndex('total marks'),
+      percentage: getIndex('percentage'),
+      grade: getIndex('grade'),
+      remarks: getIndex('remarks'),
+      date: getIndex('date'),
+      teacherId: getIndex('teacher id'),
+      teacherName: getIndex('teacher name'),
+      createdAt: getIndex('created at'),
+      updatedAt: getIndex('updated at'),
+    };
+    const toStr = (row: any[], i: number | undefined) => (typeof i === 'number' && i >= 0 ? String(row[i] || '').trim() : '');
+    const toNum = (row: any[], i: number | undefined) => {
+      const v = toStr(row, i);
+      const n = parseFloat(v);
+      return isNaN(n) ? 0 : n;
+    };
+    const records: SBARecord[] = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const score = toNum(row, idx.score);
+      const totalMarks = toNum(row, idx.totalMarks);
+      const pctHeader = toNum(row, idx.percentage);
+      const percentage = totalMarks > 0 ? (score / totalMarks) * 100 : pctHeader;
+      const rec: SBARecord = {
+        id: toStr(row, idx.id) || `SBA-${i}`,
+        studentId: toStr(row, idx.studentId),
+        studentName: toStr(row, idx.studentName),
+        className: toStr(row, idx.className),
+        subject: toStr(row, idx.subject),
+        term: toStr(row, idx.term),
+        academicYear: toStr(row, idx.academicYear),
+        assessmentType: toStr(row, idx.assessmentType).toLowerCase() as SBARecord['assessmentType'],
+        score,
+        totalMarks,
+        percentage,
+        grade: toStr(row, idx.grade) || gradeFromPercentage(percentage),
+        remarks: toStr(row, idx.remarks) || undefined,
+        date: toStr(row, idx.date),
+        teacherId: toStr(row, idx.teacherId),
+        teacherName: toStr(row, idx.teacherName),
+        createdAt: toStr(row, idx.createdAt) || new Date().toISOString(),
+        updatedAt: toStr(row, idx.updatedAt) || new Date().toISOString(),
+      };
+      if (rec.studentId && rec.subject) {
+        records.push(rec);
+      }
+    }
+    return records;
+  } catch (error) {
+    console.error('Error fetching SBA records:', error);
+    return [];
+  }
+}
+
+export async function getStudentSBASummaryBySubject(studentId: string, className?: string): Promise<SBASummary[]> {
+  const records = await getSBARecords();
+  const filtered = records.filter(r => r.studentId === studentId && (!className || r.className === className));
+  if (filtered.length === 0) return [];
+  const map: Record<string, SBARecord[]> = {};
+  for (const r of filtered) {
+    const key = r.subject;
+    if (!map[key]) map[key] = [];
+    map[key].push(r);
+  }
+  const summaries: SBASummary[] = Object.entries(map).map(([subject, recs]) => {
+    const totalAssessments = recs.length;
+    const avg = totalAssessments ? recs.reduce((s, r) => s + (r.totalMarks > 0 ? (r.score / r.totalMarks) * 100 : r.percentage), 0) / totalAssessments : 0;
+    const latest = recs.slice().sort((a, b) => {
+      const da = new Date(a.date || a.updatedAt).getTime();
+      const db = new Date(b.date || b.updatedAt).getTime();
+      return db - da;
+    })[0];
+    return {
+      studentId: latest.studentId,
+      studentName: latest.studentName,
+      className: latest.className,
+      subject,
+      term: latest.term,
+      academicYear: latest.academicYear,
+      totalAssessments,
+      averageScore: Number(avg.toFixed(2)),
+      finalGrade: gradeFromPercentage(avg),
+      teacherId: latest.teacherId,
+      teacherName: latest.teacherName,
+    };
+  });
+  return summaries;
 }
 
     

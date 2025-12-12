@@ -6,7 +6,9 @@ import { getAllStudents, getSchoolConfig } from "@/lib/data";
 import type { Student, SchoolConfig } from "@/lib/definitions";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Printer, Loader2 } from "lucide-react";
+import { Printer, Loader2, Download } from "lucide-react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 type FeeNoticeProps = {
   student: Student;
@@ -119,6 +121,7 @@ export default function PrintNoticesPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [config, setConfig] = useState<SchoolConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -140,6 +143,154 @@ export default function PrintNoticesPage() {
   // Function to pad number for notice ID
   const pad = (num: number, size: number) => ('0000' + num).slice(size * -1);
 
+  // Function to generate PDF with 3 notices per A4 sheet
+  const generatePDF = async () => {
+    if (!config) return;
+    
+    setDownloading(true);
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const noticeHeight = 99; // 1/3 of A4 height (297/3)
+      
+      // Group notices by 3 for each page
+      const noticesPerPage = 3;
+      const totalPages = Math.ceil(owingStudents.length / noticesPerPage);
+      
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) {
+          pdf.addPage();
+        }
+        
+        // Get notices for this page
+        const pageNotices = owingStudents.slice(
+          page * noticesPerPage, 
+          (page + 1) * noticesPerPage
+        );
+        
+        // Process each notice on this page
+        for (let i = 0; i < pageNotices.length; i++) {
+          const student = pageNotices[i];
+          const yPosition = i * noticeHeight;
+          
+          // Create a temporary container for this notice
+          const tempContainer = document.createElement('div');
+          tempContainer.style.position = 'fixed';
+          tempContainer.style.left = '-9999px';
+          tempContainer.style.top = '0';
+          tempContainer.style.width = '794px'; // A4 width in pixels at 96 DPI
+          tempContainer.style.height = '374px'; // Notice height in pixels
+          tempContainer.style.background = 'white';
+          tempContainer.style.padding = '20px';
+          tempContainer.style.boxSizing = 'border-box';
+          tempContainer.style.fontFamily = 'Arial, sans-serif';
+          tempContainer.style.fontSize = '14px';
+          tempContainer.style.lineHeight = '1.4';
+          
+          document.body.appendChild(tempContainer);
+          
+          // Create a simple HTML structure for the notice
+          tempContainer.innerHTML = `
+            <div style="width: 100%; height: 100%; border: 2px solid #ccc; border-radius: 8px; padding: 16px; position: relative;">
+              ${config.logoUrl ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.1; z-index: 0;">
+                <img src="${config.logoUrl}" style="width: 150px; height: 150px;" alt="Watermark" />
+              </div>` : ''}
+              <div style="position: relative; z-index: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  ${config.logoUrl ? `<img src="${config.logoUrl}" style="width: 40px; height: 40px;" alt="Logo" />` : ''}
+                  <div style="text-align: center; flex: 1;">
+                    <h1 style="font-size: 18px; font-weight: bold; margin: 0;">${config.schoolName}</h1>
+                    <div style="border: 2px solid black; padding: 4px 8px; display: inline-block; margin-top: 4px;">
+                      <strong>FEES NOTICE</strong>
+                    </div>
+                  </div>
+                  ${config.logoUrl ? `<img src="${config.logoUrl}" style="width: 40px; height: 40px;" alt="Logo" />` : ''}
+                </div>
+                
+                <div style="margin: 12px 0;">
+                  <p style="margin: 4px 0;">This Slip is to remind you of the remaining balance of <strong>${student.studentName} (${student.class})</strong>.</p>
+                  <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+                    <span>Remaining balance:</span>
+                    <strong>No. ${pad(page * noticesPerPage + i + 1, 4)}</strong>
+                  </div>
+                </div>
+                
+                <div style="margin: 16px 0; padding-left: 16px;">
+                  ${student.arrears > 0 ? `<div style="display: flex; justify-content: space-between; margin: 2px 0;">
+                    <span>Last Term Arrears</span>
+                    <span>-</span>
+                    <span>GHS ${student.arrears.toFixed(2)}</span>
+                  </div>` : ''}
+                  ${student.balance > (student.arrears + (student.books || 0)) ? `<div style="display: flex; justify-content: space-between; margin: 2px 0;">
+                    <span>Current Term fees</span>
+                    <span>-</span>
+                    <span>GHS ${(student.balance - student.arrears - (student.books || 0)).toFixed(2)}</span>
+                  </div>` : ''}
+                  ${student.books > 0 ? `<div style="display: flex; justify-content: space-between; margin: 2px 0;">
+                    <span>Books</span>
+                    <span>-</span>
+                    <span>GHS ${student.books.toFixed(2)}</span>
+                  </div>` : ''}
+                  <div style="display: flex; justify-content: space-between; margin: 4px 0; padding-top: 4px; border-top: 2px solid black; font-weight: bold;">
+                    <span>Total fees</span>
+                    <span>=</span>
+                    <span>GHS ${student.balance.toFixed(2)}</span>
+                  </div>
+                </div>
+                
+                <div style="margin: 12px 0;">
+                  <p style="margin: 2px 0;">Please we edge you to pay us the balance of the school fees.</p>
+                  <p style="margin: 2px 0;">Counting on your usual cooperation.</p>
+                  <p style="margin: 4px 0;">Thank you.</p>
+                </div>
+                
+                <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
+                  <div style="font-size: 10px;">
+                    <p style="margin: 1px 0; font-weight: bold;">MOTTO:QUALITY EDUCATION</p>
+                    <p style="margin: 1px 0; font-weight: bold;">THROUGH THE KNOWLEDGE</p>
+                    <p style="margin: 1px 0; font-weight: bold;">OF GOD</p>
+                    <p style="margin: 2px 0;">Tel: ${config.momoNumber}</p>
+                  </div>
+                  <div style="text-align: center; font-size: 10px;">
+                    <div style="border-top: 2px dotted #666; padding-top: 2px; margin-bottom: 2px;">David Amankwaah</div>
+                    <div style="font-size: 8px;">(Campus Manager)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          // Wait for images to load
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Convert to canvas
+          const canvas = await html2canvas(tempContainer, {
+            backgroundColor: 'white',
+            scale: 2,
+            width: 794,
+            height: 374,
+            useCORS: true,
+            allowTaint: true,
+          });
+          
+          // Convert to image and add to PDF
+          const imgData = canvas.toDataURL('image/png');
+          pdf.addImage(imgData, 'PNG', 0, yPosition, 210, 99);
+          
+          // Clean up
+          document.body.removeChild(tempContainer);
+        }
+      }
+      
+      // Save the PDF
+      pdf.save(`fee-notices-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (loading || !config) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -152,10 +303,20 @@ export default function PrintNoticesPage() {
     <div className="bg-gray-100 p-4 sm:p-8">
        <div className="max-w-4xl mx-auto mb-8 no-print">
             <h1 className="text-3xl font-bold">Print Fee Notices</h1>
-            <p className="text-muted-foreground mt-1">Showing notices for {owingStudents.length} students with outstanding balances. Use your browser's print function (Ctrl+P or Cmd+P) to print this page.</p>
-            <Button onClick={() => window.print()} className="mt-4">
-                <Printer className="mr-2" /> Print Notices
-            </Button>
+            <p className="text-muted-foreground mt-1">Showing notices for {owingStudents.length} students with outstanding balances. Download PDF with 3 notices per A4 sheet or use browser print.</p>
+            <div className="flex gap-4 mt-4">
+                <Button onClick={generatePDF} disabled={downloading || owingStudents.length === 0}>
+                    {downloading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Download className="mr-2" />
+                    )}
+                    {downloading ? 'Generating PDF...' : 'Download PDF'}
+                </Button>
+                <Button onClick={() => window.print()} variant="outline">
+                    <Printer className="mr-2" /> Print Notices
+                </Button>
+            </div>
         </div>
       <div className="max-w-4xl mx-auto bg-white p-4 sm:p-8 print-container">
          <div className="print-grid">
@@ -172,7 +333,7 @@ export default function PrintNoticesPage() {
          </div>
       </div>
 
-       <style jsx global>{`
+       <style>{`
             @media screen {
                 .print-grid {
                     display: grid;

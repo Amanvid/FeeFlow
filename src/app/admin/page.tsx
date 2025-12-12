@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getAllClaims, getAllStudents } from "@/lib/data";
+import { getAllClaims, getAllStudents, getTeacherUsers } from "@/lib/data";
 import ClaimsTable from "@/components/admin/claims-table";
 import { cn } from "@/lib/utils";
 import ClassEnrollmentChart from "@/components/admin/charts/class-enrollment-chart";
@@ -14,6 +14,7 @@ import ClassEnrollmentChart from "@/components/admin/charts/class-enrollment-cha
 export default async function AdminDashboard() {
   const claims = await getAllClaims();
   const students = await getAllStudents();
+  const teachers = await getTeacherUsers();
 
   const totalClaims = claims.length;
   // Corrected: Calculate total outstanding balance from the students data source of truth.
@@ -231,6 +232,20 @@ export default async function AdminDashboard() {
           value={oldStudents} 
           description="Total number of continuing students."
           className="bg-lime-600"
+        />
+        
+        {/* Teacher Statistics */}
+        <StatCard 
+          title="Total Teachers" 
+          value={teachers.length} 
+          description="All registered teachers."
+          className="bg-amber-600"
+        />
+        <StatCard 
+          title="Active Teachers" 
+          value={teachers.filter(t => t.status === 'active').length} 
+          description="Currently active teaching staff."
+          className="bg-emerald-600"
         />
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">

@@ -4,7 +4,7 @@ import { verifyOtp } from '@/lib/actions';
 import { getAdminUsers, getTeacherUsers } from '@/lib/data';
 import { encrypt } from '@/lib/session';
 import { cookies } from 'next/headers';
-import { TeacherUser, AdminUser } from '@/lib/definitions';
+import { TeacherUser, AdminUserWithPassword } from '@/lib/definitions';
 
 export async function POST(req: Request) {
   try {
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     console.log('Looking for username:', username);
     
     // Check if user is a teacher first
-    let user: TeacherUser | AdminUser | undefined = teacherUsers.find(t => t.username === username);
+    let user: TeacherUser | AdminUserWithPassword | undefined = teacherUsers.find(t => t.username === username);
     let userType = 'teacher';
     
     console.log('Found in teachers:', !!user);

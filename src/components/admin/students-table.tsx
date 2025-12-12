@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Student } from "@/lib/definitions";
-import { Search, CreditCard, Send, Loader2 } from "lucide-react";
+import { Search, CreditCard, Send, Loader2, BookOpen } from "lucide-react";
 import { sendFeeReminderSms } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 
@@ -118,6 +118,11 @@ export default function StudentsTable({ students }: { students: Student[] }) {
     setLoadingReminder(null);
   };
   
+  const handleViewSBA = (student: Student) => {
+    const href = `/students/${encodeURIComponent(student.id)}/sba?class=${encodeURIComponent(student.class || '')}`;
+    router.push(href);
+  };
+  
   const handleDialogSend = () => {
      if (selectedStudent && manualPhoneNumber) {
       handleSendReminder(selectedStudent, manualPhoneNumber);
@@ -193,7 +198,7 @@ export default function StudentsTable({ students }: { students: Student[] }) {
                         {student.balance > 0 ? "Owing" : "Paid"}
                       </Badge>
                     </TableCell>
-                     <TableCell className="text-right space-x-2">
+                    <TableCell className="text-right space-x-2">
                       <Button 
                         size="sm"
                         variant="outline"
@@ -215,6 +220,14 @@ export default function StudentsTable({ students }: { students: Student[] }) {
                       >
                         <CreditCard className="mr-2 h-4 w-4" />
                         Pay
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleViewSBA(student)}
+                      >
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        View SBA
                       </Button>
                     </TableCell>
                   </TableRow>

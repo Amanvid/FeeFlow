@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { encrypt } from '@/lib/session';
 import { cookies } from 'next/headers';
-import { getTeacherUsers } from '@/lib/data';
+import { getTeacherLoginUsers } from '@/lib/data';
+import type { TeacherUserWithPassword } from '@/lib/definitions';
 import type { TeacherUser } from '@/lib/definitions';
 
 export async function POST(req: Request) {
@@ -15,9 +16,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const teacherUsers = await getTeacherUsers();
+    const teacherUsers = await getTeacherLoginUsers();
     const teacher = teacherUsers.find(
-      (t) => t.username === username && t.password === password
+      (t: TeacherUserWithPassword) => t.username === username && t.password === password
     );
 
     if (teacher) {

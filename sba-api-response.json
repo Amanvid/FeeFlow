@@ -1,0 +1,34 @@
+{
+  "success": true,
+  "data": {
+    "teacherName": "Mr. Smith",
+    "subject": "Mathematics",
+    "className": "BS 2",
+    "records": [
+      {
+        "id": "123-abubakarifatmat-123",
+        "studentName": "Abubakar Ifatmat",
+        "individualTest": 85,
+        "classTest": 78,
+        "totalClassScore": 163,
+        "scaledTo30": 30,
+        "endOfTermExam": 50,
+        "scaledTo70": 35,
+        "overallTotal": 65,
+        "position": 1
+      },
+      {
+        "id": "124-fatimabello-124",
+        "studentName": "Fatima Bello",
+        "individualTest": 67,
+        "classTest": 74,
+        "totalClassScore": 141,
+        "scaledTo30": 30,
+        "endOfTermExam": 50,
+        "scaledTo70": 35,
+        "overallTotal": 65,
+        "position": 2
+      }
+    ]
+  }
+}

@@ -11,6 +11,7 @@ import {
   Book,
   UserPlus,
   FileEdit,
+  GraduationCap,
   Menu,
 } from "lucide-react";
 
@@ -45,10 +46,7 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 
-interface AdminUser {
-  username: string;
-  role: string;
-}
+import { AdminUser } from "@/lib/definitions";
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -71,6 +69,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const menuItems = [
     { href: "/admin", label: "Dashboard", icon: Home },
     { href: "/admin/students", label: "Students", icon: Users },
+    { href: "/admin/teachers", label: "Staff", icon: GraduationCap },
     { href: "/admin/admissions", label: "Admissions", icon: UserPlus },
     { href: "/admin/books", label: "Books", icon: Book },
     { href: "/admin/data-entry", label: "Data Entry", icon: FileEdit },
@@ -149,7 +148,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
             {/* ROUTE TITLE */}
             <h1 className="text-lg sm:text-xl font-semibold capitalize truncate">
-              {pathname.replace("/admin", "").replace("/", "") || "Dashboard"}
+              {pathname === "/admin/teachers" 
+                ? "Staff" 
+                : pathname.replace("/admin", "").replace("/", "") || "Dashboard"}
             </h1>
 
             <div className="ml-auto"></div>

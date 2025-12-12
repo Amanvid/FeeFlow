@@ -128,7 +128,7 @@ export class GoogleSheetsService {
     try {
       const response = await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!${range}`,
+        range: `'${sheetName}'!${range}`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: values,
@@ -213,7 +213,7 @@ export class GoogleSheetsService {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: range ? `${sheetName}!${range}` : `${sheetName}!A1:Z1000`, // Default range
+        range: range ? `'${sheetName}'!${range}` : `'${sheetName}'!A1:Z1000`, // Default range with quotes for sheet names with spaces
         valueRenderOption,
       });
 
@@ -398,6 +398,101 @@ export class GoogleSheetsService {
       return {
         success: false,
         message: `Failed to update row: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  /**
+   * Update specific columns for a teacher/non-teacher by username (unique identifier)
+   * This prevents creating new entries and only updates specified fields
+   */
+  async updateStaffByUsername(
+    sheetName: 'Teachers' | 'Non-Teachers', 
+    username: string, 
+    updates: Partial<{
+      name: string;
+      role: string;
+      status: string;
+      class?: string;
+      department?: string;
+      contact: string;
+      location: string;
+      employmentDate?: string;
+      dateStopped?: string;
+      password?: string;
+    }>
+  ) {
+    try {
+      // Get current data to find the user and preserve existing data
+      const getResult = await this.getSheetData(sheetName);
+      if (!getResult.success || !getResult.data || getResult.data.length === 0) {
+        return {
+          success: false,
+          message: 'No data found in sheet',
+        };
+      }
+
+      const rows = getResult.data;
+      
+      // Find the user by username (username is at index 4 in the Teachers sheet)
+      let userRowIndex = -1;
+      const usernameColumn = 4; // Username is column E (index 4)
+      
+      for (let i = 1; i < rows.length; i++) { // Start from 1 to skip header
+        if (rows[i][usernameColumn] === username) {
+          userRowIndex = i;
+          break;
+        }
+      }
+
+      if (userRowIndex === -1) {
+        return {
+          success: false,
+          message: `User with username '${username}' not found`,
+        };
+      }
+
+      // Get current row data to preserve existing values
+      const currentRow = rows[userRowIndex];
+      
+      // Create updated row with only the specified changes
+      const updatedRow = [...currentRow];
+      
+      // Apply updates only to specified fields
+      if (updates.name !== undefined) updatedRow[0] = updates.name; // Name at index 0
+      if (sheetName === 'Teachers' && updates.class !== undefined) updatedRow[1] = updates.class; // Class at index 1 for teachers
+      if (updates.role !== undefined) updatedRow[2] = updates.role; // Role at index 2
+      if (updates.status !== undefined) updatedRow[3] = updates.status; // Status at index 3
+      if (updates.password !== undefined) updatedRow[5] = updates.password; // Password at index 5
+      if (updates.contact !== undefined) updatedRow[6] = updates.contact; // Contact at index 6
+      if (updates.location !== undefined) updatedRow[7] = updates.location; // Location at index 7
+      if (updates.employmentDate !== undefined) updatedRow[8] = updates.employmentDate; // Employment Date at index 8
+      if (updates.dateStopped !== undefined) updatedRow[9] = updates.dateStopped; // Date Stopped at index 9
+      
+      // For non-teachers, department replaces class at index 1
+      if (sheetName === 'Non-Teachers' && updates.department !== undefined) updatedRow[1] = updates.department;
+
+      // Update only the specific row (userRowIndex + 1 because Sheets API is 1-indexed and we have headers)
+      const updateResult = await this.updateRowInSheet(sheetName, userRowIndex + 1, updatedRow);
+      
+      if (!updateResult.success) {
+        return updateResult;
+      }
+
+      return {
+        success: true,
+        message: 'Staff member updated successfully',
+        data: {
+          rowIndex: userRowIndex,
+          username: username,
+          updatedFields: Object.keys(updates)
+        }
+      };
+    } catch (error) {
+      console.error('Error updating staff by username:', error);
+      return {
+        success: false,
+        message: `Failed to update staff: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
   }

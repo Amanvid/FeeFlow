@@ -1,29 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getAllStudents } from '@/lib/data';
+import { NextResponse } from 'next/server';
+import { getStudentsByClass } from '@/lib/data';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const className = searchParams.get('className') || 'Creche';
+  
   try {
-    const students = await getAllStudents();
+    console.log(`Test API: Fetching students for class "${className}"`);
+    const students = await getStudentsByClass(className);
+    console.log(`Test API: Found ${students.length} students`);
     
-    // Return first 5 students as a sample with all properties
-    const sampleStudents = students.slice(0, 5).map(student => {
-      const studentObj: any = {};
-      Object.keys(student).forEach(key => {
-        studentObj[key] = (student as any)[key];
-      });
-      return studentObj;
-    });
-    
-    return NextResponse.json({
-      success: true,
-      totalStudents: students.length,
-      sampleStudents: sampleStudents
+    return NextResponse.json({ 
+      success: true, 
+      students,
+      className,
+      count: students.length
     });
   } catch (error) {
-    console.error('Error fetching students:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to fetch students' },
-      { status: 500 }
-    );
+    console.error('Test API: Error fetching students:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      className
+    }, { status: 500 });
   }
 }

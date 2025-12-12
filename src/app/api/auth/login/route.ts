@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { getAdminUsers } from '@/lib/data';
+import type { AdminUserWithPassword } from '@/lib/definitions';
 
 // This route only verifies credentials, it does not create a session.
 // Session is created by the verify-otp route.
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
 
     const adminUsers = await getAdminUsers();
     const user = adminUsers.find(
-      (u) => u.username === username && u.password === password
+      (u: AdminUserWithPassword) => u.username === username && u.password === password
     );
 
     if (user) {

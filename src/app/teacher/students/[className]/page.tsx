@@ -276,9 +276,14 @@ export default function TeacherStudentsPage() {
                   </div>
                 </div>
 
-                {/* Books Information - REMOVED to avoid duplication with Fee Breakdown */}
-
-
+                <div className="flex justify-end">
+                  <Link
+                    href={`/students/${encodeURIComponent(student.id)}/sba?class=${encodeURIComponent(student.class)}`}
+                    className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    View SBA
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
