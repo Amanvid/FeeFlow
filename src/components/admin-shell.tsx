@@ -74,6 +74,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     { href: "/admin/books", label: "Books", icon: Book },
     { href: "/admin/data-entry", label: "Data Entry", icon: FileEdit },
     { href: "/admin/print-notices", label: "Print Notices", icon: FileText },
+    { href: "/admin/sms", label: "Send SMS", icon: FileText },
     { href: "/admin/settings", label: "Settings", icon: Settings },
   ];
 
