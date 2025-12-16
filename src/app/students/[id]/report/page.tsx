@@ -128,6 +128,60 @@ export default async function StudentReportPage({
     (s) => (s.class || '').trim().toLowerCase() === (effectiveClass || '').trim().toLowerCase()
   ).length
 
+  const normalizeGroup = (c?: string) => {
+    const n = (c || '').toLowerCase().trim()
+    if (n === 'creche') return 'Creche'
+    if (n.startsWith('nursery')) return 'Nursery 1 & 2'
+    if (n.startsWith('kg')) return 'KG 1 & 2'
+    if (n.startsWith('bs')) return 'BS 1 to 6'
+    return ''
+  }
+  const deriveTermLabel = (value?: string) => {
+    const raw = String(value || '').toLowerCase().trim()
+    if (!raw) return ''
+    if (raw.startsWith('first') || /^1st/.test(raw)) return 'Term 1'
+    if (raw.startsWith('second') || /^2nd/.test(raw)) return 'Term 2'
+    if (raw.startsWith('third') || /^3rd/.test(raw)) return 'Term 3'
+    return value || ''
+  }
+  const group = normalizeGroup(effectiveClass)
+  const totalScoresByGroup = sbaConfig?.totalScoresByGroup || {}
+  const classTotalMax = group && totalScoresByGroup[group] ? Number(totalScoresByGroup[group]) : 0
+
+  // Compute highest student total (sum across subjects for class)
+  let highestAggregatedTotal = 0
+  try {
+    const subjectsRes = await fetch(`${baseUrl}/api/sba/class-subjects?className=${encodeURIComponent(effectiveClass)}`, { cache: 'no-store' })
+    let subjectsList: string[] = []
+    if (subjectsRes.ok) {
+      const js = await subjectsRes.json()
+      subjectsList = Array.isArray(js.subjects) ? js.subjects : []
+    }
+    if (subjectsList.length === 0) {
+      const n = effectiveClass.trim()
+      if (n === 'BS 1' || n === 'BS 2' || n === 'BS 3' || n === 'BS 4' || n === 'BS 5') {
+        subjectsList = ['English', 'Mathematics', 'Science', 'Computing', 'History', 'R.M.E', 'Asante - Twi', 'Creative Arts']
+      }
+    }
+    const termLabel = deriveTermLabel(sbaConfig?.termName) || 'Term 1'
+    const totalsMap = new Map<string, number>()
+    for (const subj of subjectsList) {
+      const qs = new URLSearchParams({ className: effectiveClass, subject: subj, term: termLabel }).toString()
+      const res = await fetch(`${baseUrl}/api/sba/class-assessment?${qs}`, { cache: 'no-store' })
+      if (!res.ok) continue
+      const json = await res.json()
+      const rows: any[] = Array.isArray(json.records) ? json.records : []
+      for (const r of rows) {
+        const name = String(r.studentName || '').trim()
+        const total = Number(r.overallTotal || 0)
+        if (!name) continue
+        const prev = totalsMap.get(name) || 0
+        totalsMap.set(name, prev + (Number.isFinite(total) ? total : 0))
+      }
+    }
+    highestAggregatedTotal = Math.max(0, ...Array.from(totalsMap.values()))
+  } catch {}
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
@@ -143,48 +197,19 @@ export default async function StudentReportPage({
       </div>
       <Card>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
             <div>
-              <div className="text-sm text-muted-foreground">Student</div>
-              <div className="font-semibold">{student.studentName}</div>
+              <div className="text-sm text-muted-foreground">Total Class Subjects Score</div>
+              <div className="font-semibold">{classTotalMax || 0}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Class</div>
               <div className="font-semibold">{className || student.class}</div>
             </div>
             <div>
-              <div className="text-sm text-muted-foreground">Subjects</div>
-              <div className="font-semibold">{summaries.length}</div>
+              <div className="text-sm text-muted-foreground">Highest Student Total</div>
+              <div className="font-semibold">{Math.round(highestAggregatedTotal)}</div>
             </div>
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Term</TableHead>
-                  <TableHead>Academic Year</TableHead>
-                  <TableHead className="text-right">Assessments</TableHead>
-                  <TableHead className="text-right">Average %</TableHead>
-                  <TableHead className="text-right">Final Grade</TableHead>
-                  <TableHead>Teacher</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {summaries.map((s, idx) => (
-                  <TableRow key={`${s.subject}-${idx}`}>
-                    <TableCell className="font-medium">{s.subject}</TableCell>
-                    <TableCell>{s.term}</TableCell>
-                    <TableCell>{s.academicYear}</TableCell>
-                    <TableCell className="text-right">{s.totalAssessments}</TableCell>
-                    <TableCell className="text-right">{s.averageScore.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{s.finalGrade}</TableCell>
-                    <TableCell>{s.teacherName}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           </div>
         </CardContent>
       </Card>

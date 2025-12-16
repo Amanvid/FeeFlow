@@ -20,7 +20,6 @@ interface SBAClientContentProps {
   availableSubjects: string[];
   initialSubject: string;
   initialAssessmentData: any;
-  onSubmitAssessment: (data: any) => Promise<{ success: boolean; message: string }>;
   sbaConfig: SBAConfig;
 }
 
@@ -31,7 +30,6 @@ export function SBAClientContent({
   availableSubjects, 
   initialSubject, 
   initialAssessmentData,
-  onSubmitAssessment,
   sbaConfig
 }: SBAClientContentProps) {
   const router = useRouter();
@@ -72,6 +70,38 @@ export function SBAClientContent({
     setAssessmentData(initialAssessmentData);
   }, [initialAssessmentData]);
 
+  const handleSubmitAssessment = async (data: {
+    studentId: string;
+    subject: string;
+    assessmentType: string;
+    score: number;
+    maxScore: number;
+    term: string;
+    className: string;
+  }): Promise<void> => {
+    try {
+      const response = await fetch('/api/sba/update-student', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to submit assessment');
+      }
+      // optionally refresh class assessment after submit
+      try {
+        const refreshed = await fetch(`/api/sba/class-assessment?className=${encodeURIComponent(className)}&subject=${encodeURIComponent(currentSubject)}&term=${encodeURIComponent(term)}`);
+        if (refreshed.ok) {
+          const refreshedData = await refreshed.json();
+          setAssessmentData(refreshedData);
+        }
+      } catch {}
+    } catch (err) {
+      console.error('Error submitting assessment:', err);
+      throw err;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -104,7 +134,7 @@ export function SBAClientContent({
             </div>
             <div>
               <span className="text-muted-foreground">Semester/Term:</span>
-              <p className="font-medium">{sbaConfig.semesterTerm}</p>
+              <p className="font-medium">{sbaConfig.termName}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Position:</span>
@@ -171,7 +201,7 @@ export function SBAClientContent({
           students={[{ id: student.id, name: student.studentName }]}
           subjects={[currentSubject]}
           classes={[className]}
-          onSubmit={onSubmitAssessment}
+          onSubmit={handleSubmitAssessment}
         />
       </div>
     </div>

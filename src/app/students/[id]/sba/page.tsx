@@ -3,7 +3,6 @@ import { getStudentById } from '@/lib/data';
 import { getSBAClassAssessment, getAvailableSubjectsForClass } from '@/lib/sba-assessment';
 import { getSBAConfig } from '@/lib/sba-config';
 import { SBAClientContent } from './sba-client-content';
-import { submitAssessment } from './actions';
 
 export default async function StudentSBAPage({ 
   params, 
@@ -43,7 +42,6 @@ export default async function StudentSBAPage({
       initialSubject={subject}
       initialAssessmentData={initialAssessmentData}
       sbaConfig={sbaConfig}
-      onSubmitAssessment={submitAssessment}
     />
   );
 }

@@ -17,12 +17,14 @@ export default function ClassRankingModal({
   className,
   subject,
   totalMax,
-  records
+  records,
+  defaultOpen
 }: {
   className: string
   subject: string
   totalMax: number
   records: RecordRow[]
+  defaultOpen?: boolean
 }) {
   const sorted = useMemo(() => {
     const rows = (records || []).map(r => ({
@@ -33,11 +35,20 @@ export default function ClassRankingModal({
       subjectCount: typeof r.subjectCount === 'number' ? r.subjectCount : undefined
     }))
     rows.sort((a, b) => b.total - a.total)
-    return rows
+    // Compute positions based on total (tie-aware: same score gets same position)
+    let lastScore = NaN
+    let lastPosition = 0
+    const ranked = rows.map((r, i) => {
+      const pos = r.total !== lastScore ? i + 1 : lastPosition
+      lastScore = r.total
+      lastPosition = pos
+      return { ...r, computedPosition: pos }
+    })
+    return ranked
   }, [records])
 
   return (
-    <Dialog>
+    <Dialog defaultOpen={!!defaultOpen}>
       <DialogTrigger asChild>
         <Button variant="default">View Total Score Ranking</Button>
       </DialogTrigger>
@@ -57,6 +68,7 @@ export default function ClassRankingModal({
                 <TableHead>Student</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="w-24 text-right">Subjects</TableHead>
+                <TableHead className="w-24">Position</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -66,7 +78,7 @@ export default function ClassRankingModal({
                   <TableCell className="font-medium">{r.studentName}</TableCell>
                   <TableCell className="text-right">{Math.round(r.total)}</TableCell>
                   <TableCell className="text-right">{typeof r.subjectCount === 'number' ? r.subjectCount : ''}</TableCell>
-                  <TableCell>{r.position || ''}</TableCell>
+                  <TableCell>{r.computedPosition}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

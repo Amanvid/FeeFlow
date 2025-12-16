@@ -11,6 +11,7 @@ export interface SBAConfig {
   position: string;
   includePosition: boolean;
   feesByGroup?: Record<string, number>;
+  totalScoresByGroup?: Record<string, number>;
 }
 
 export async function getSBAConfig(): Promise<SBAConfig> {
@@ -123,6 +124,34 @@ export async function getSBAConfig(): Promise<SBAConfig> {
       return false;
     };
     findFeesFromSheet();
+
+    // Parse "Total Score" table from N1:Q3
+    try {
+      const totalRange = await sheets.getSheetData("SBA Config", "N1:Q3");
+      const totalRows: any[][] = (totalRange && totalRange.data) || [];
+      if (totalRows.length >= 2) {
+        // Some sheets place a title in row 1, headers in row 2, values in row 3
+        const hdrs = (totalRows.length >= 3 ? totalRows[1] : totalRows[0] || []).map((h: any) => String(h || "").trim());
+        const valsRow = totalRows.length >= 3 ? (totalRows[2] || []) : (totalRows[1] || []);
+        const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+        const map: Record<string, number> = {};
+        for (let i = 0; i < hdrs.length; i++) {
+          const h = norm(hdrs[i] || "");
+          const vStr = String(valsRow[i] ?? "").trim();
+          const vNum = Number(vStr.replace(/[^\d.]/g, ""));
+          if (!Number.isFinite(vNum) || vNum <= 0) continue;
+          if (h.includes("creche")) map["Creche"] = vNum;
+          else if (h.includes("nursery") && (h.includes("1") || h.includes("one")) && (h.includes("2") || h.includes("two")))
+            map["Nursery 1 & 2"] = vNum;
+          else if (h.includes("kg") && (h.includes("1") || h.includes("one")) && (h.includes("2") || h.includes("two")))
+            map["KG 1 & 2"] = vNum;
+          else if (h.includes("bs")) map["BS 1 to 6"] = vNum;
+        }
+        if (Object.keys(map).length > 0) {
+          config.totalScoresByGroup = map;
+        }
+      }
+    } catch {}
 
     for (const row of rows) {
       const cell = String((row && row[0]) || "").trim();

@@ -92,26 +92,26 @@ export async function getSBAAssessmentData(studentId: string, className: string,
       const endOfTermExamAvg = examRecords.length > 0 ? data.endOfTermExam / examRecords.length : 50; // Default exam score
 
       const totalClassScore = individualTestAvg + classTestAvg;
-      const scaledTo30 = Math.min(30, totalClassScore); // Cap at 30
-      const scaledTo70 = Math.min(70, (endOfTermExamAvg / 100) * 70); // Scale exam to 70
-      const overallTotal = scaledTo30 + scaledTo70;
+      const scaledClassScore = Math.min(30, totalClassScore);
+      const scaledExamScore = Math.min(70, (endOfTermExamAvg / 100) * 70);
+      const overallTotal = scaledClassScore + scaledExamScore;
 
       return {
         id,
         studentName: data.studentName,
-        individualTest: individualTestAvg,
-        classTest: classTestAvg,
+        individualTestScore: individualTestAvg,
+        classTestScore: classTestAvg,
         totalClassScore,
-        scaledTo30,
-        endOfTermExam: endOfTermExamAvg,
-        scaledTo70,
+        scaledClassScore,
+        examScore: endOfTermExamAvg,
+        scaledExamScore,
         overallTotal,
         position: 0 // Will be calculated after sorting
       };
     });
 
     // Sort by overall total and assign positions
-    assessmentRecords.sort((a, b) => b.overallTotal - a.overallTotal);
+    assessmentRecords.sort((a, b) => Number(b.overallTotal) - Number(a.overallTotal));
     assessmentRecords.forEach((record, index) => {
       record.position = index + 1;
     });
