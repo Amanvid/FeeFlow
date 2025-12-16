@@ -171,7 +171,7 @@ export function SBAClientContent({
           students={[{ id: student.id, name: student.studentName }]}
           subjects={[currentSubject]}
           classes={[className]}
-          onSubmit={async (data) => { await onSubmitAssessment(data); }}
+          onSubmit={onSubmitAssessment}
         />
       </div>
     </div>

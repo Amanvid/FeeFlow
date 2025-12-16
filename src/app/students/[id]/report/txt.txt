@@ -1,0 +1,15 @@
+add a download button and set the print and dwonload to capture only the report card area
+
+fix"    "feesByGroup": {}" is empty it suppose to show the selected student class group amount
+
+
+
+"
+Items to bring next term :2 big Brooms"
+should read from the SBA Config sheet "Items To Bring			
+Creche	Nursery 1 & 2	KG 1 & 2	BS 1 to 6
+1 Parazone, 1 Deterol and 5 T-rolls	2 Gieshia Soaps, 1 Deterol and 5 T-rolls	Liguid Soap and  2 T-rolls	2 big Brooms"
+
+S1:V3
+
+fix the Download Btn to Download the report card section

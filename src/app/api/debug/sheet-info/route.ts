@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     const rows = result.data;
-    const analysis = (rows as any[]).map((row: any[], index: number) => ({
+    const analysis = rows.map((row: any[], index: number) => ({
       rowIndex: index + 1,
       colA: row[0],
       colB: row[1],
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     // Find keywords
     const keywords = ['Literacy', 'Numeracy', 'Colouring', 'Writting', 'Writing', 'Student Name'];
-    const found = analysis.filter(r => 
+    const found = analysis.filter((r: any) => 
       keywords.some(k => 
         (r.colA && r.colA.includes(k)) || 
         (r.colB && r.colB.includes(k)) || 

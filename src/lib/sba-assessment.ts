@@ -99,19 +99,19 @@ export async function getSBAAssessmentData(studentId: string, className: string,
       return {
         id,
         studentName: data.studentName,
-        individualTestScore: individualTestAvg,
-        classTestScore: classTestAvg,
+        individualTest: individualTestAvg,
+        classTest: classTestAvg,
         totalClassScore,
-        scaledClassScore: scaledTo30,
-        examScore: endOfTermExamAvg,
-        scaledExamScore: scaledTo70,
+        scaledTo30,
+        endOfTermExam: endOfTermExamAvg,
+        scaledTo70,
         overallTotal,
-        position: 0
+        position: 0 // Will be calculated after sorting
       };
     });
 
     // Sort by overall total and assign positions
-    assessmentRecords.sort((a, b) => Number(b.overallTotal) - Number(a.overallTotal));
+    assessmentRecords.sort((a, b) => b.overallTotal - a.overallTotal);
     assessmentRecords.forEach((record, index) => {
       record.position = index + 1;
     });

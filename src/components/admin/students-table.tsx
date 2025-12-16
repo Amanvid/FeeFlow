@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Student } from "@/lib/definitions";
-import { Search, CreditCard, Send, Loader2, BookOpen } from "lucide-react";
+import { Search, CreditCard, Send, Loader2, BookOpen, FileText } from "lucide-react";
 import { sendFeeReminderSms } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 
@@ -225,9 +225,20 @@ export default function StudentsTable({ students }: { students: Student[] }) {
                         size="sm"
                         variant="secondary"
                         onClick={() => handleViewSBA(student)}
+                        className="hidden sm:flex"
                       >
                         <BookOpen className="mr-2 h-4 w-4" />
                         View SBA
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => router.push(`/students/${encodeURIComponent(student.id)}/report${student.class ? `?class=${encodeURIComponent(student.class)}` : ''}`)}
+                        title="View Full Report"
+                        className="flex items-center"
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span className="ml-2">Report</span>
                       </Button>
                     </TableCell>
                   </TableRow>

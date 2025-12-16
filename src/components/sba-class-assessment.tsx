@@ -1,6 +1,11 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { FileText } from 'lucide-react';
 
 interface ClassAssessmentRecord {
   id: string;
@@ -23,6 +28,17 @@ interface SBAClassAssessmentProps {
 }
 
 export function SBAClassAssessment({ teacherName, subject, className, records }: SBAClassAssessmentProps) {
+  const router = useRouter();
+
+  const handleViewReport = (recordId: string, studentName: string) => {
+    const encodedId = encodeURIComponent(recordId);
+    const encodedName = encodeURIComponent(studentName);
+
+    router.push(
+      `/students/${encodedId}/report?class=${encodeURIComponent(className)}&name=${encodedName}`
+    );
+  };
+
   return (
     <div className="w-full">
       {/* Header Section */}
@@ -50,6 +66,7 @@ export function SBAClassAssessment({ teacherName, subject, className, records }:
                   <TableHead className="border border-gray-300 text-center" colSpan={2}>End of Term Exam</TableHead>
                   <TableHead className="border border-gray-300 text-center font-semibold" rowSpan={2}>Overall Total</TableHead>
                   <TableHead className="border border-gray-300 text-center font-semibold" rowSpan={2}>Position</TableHead>
+                  <TableHead className="border border-gray-300 text-center font-semibold" rowSpan={2}>Actions</TableHead>
                 </TableRow>
                 <TableRow className="bg-gray-100">
                   <TableHead className="border border-gray-300 text-center text-xs">Indv. Test (30mks)</TableHead>
@@ -74,6 +91,17 @@ export function SBAClassAssessment({ teacherName, subject, className, records }:
                       <Badge variant={record.position <= 3 ? 'default' : 'secondary'}>
                         {record.position}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="border border-gray-300 text-center">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleViewReport(record.id, record.studentName)}
+                        className="flex items-center gap-1 mx-auto"
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span>Report</span>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

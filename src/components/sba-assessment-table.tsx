@@ -1,5 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
+import { FileText } from 'lucide-react';
 
 interface SBAAssessmentRecord {
   id: string;
@@ -22,6 +25,15 @@ interface SBAAssessmentTableProps {
 }
 
 export function SBAAssessmentTable({ teacherName, subject, className, records }: SBAAssessmentTableProps) {
+  const router = useRouter();
+
+  const handleViewReport = (studentId: string, studentName: string) => {
+    // Encode both the ID and name to handle special characters
+    const encodedId = encodeURIComponent(studentId);
+    const encodedName = encodeURIComponent(studentName);
+    router.push(`/students/${encodedId}/report?class=${encodeURIComponent(className)}&name=${encodedName}`);
+  };
+
   return (
     <Card className="w-full">
       <CardHeader className="pb-4">
@@ -56,7 +68,8 @@ export function SBAAssessmentTable({ teacherName, subject, className, records }:
                 <TableHead className="text-center border-r">End of Term<br/>Exam</TableHead>
                 <TableHead className="text-center border-r">100 MKS<br/>SCALED TO</TableHead>
                 <TableHead className="text-center border-r">Overall<br/>Total</TableHead>
-                <TableHead className="text-center">Position</TableHead>
+                <TableHead className="text-center border-r">Position</TableHead>
+                <TableHead className="text-center">Actions</TableHead>
               </TableRow>
               <TableRow className="border-b">
                 <TableHead className="text-center border-r"></TableHead>
@@ -67,6 +80,7 @@ export function SBAAssessmentTable({ teacherName, subject, className, records }:
                 <TableHead className="text-center border-r">30%</TableHead>
                 <TableHead className="text-center border-r">100 marks</TableHead>
                 <TableHead className="text-center border-r">70%</TableHead>
+                <TableHead className="text-center border-r"></TableHead>
                 <TableHead className="text-center border-r"></TableHead>
                 <TableHead className="text-center"></TableHead>
               </TableRow>
@@ -83,7 +97,18 @@ export function SBAAssessmentTable({ teacherName, subject, className, records }:
                   <TableCell className="text-center border-r">{record.endOfTermExam.toFixed(2)}</TableCell>
                   <TableCell className="text-center border-r font-semibold">{record.scaledTo70.toFixed(2)}</TableCell>
                   <TableCell className="text-center border-r font-bold text-lg">{record.overallTotal.toFixed(2)}</TableCell>
-                  <TableCell className="text-center font-bold">{record.position}</TableCell>
+                  <TableCell className="text-center border-r font-bold">{record.position}</TableCell>
+                  <TableCell className="text-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleViewReport(record.id, record.studentName)}
+                      className="flex items-center gap-1"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>Report</span>
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

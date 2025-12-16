@@ -89,6 +89,17 @@ export async function POST(request: NextRequest) {
       config = CRECHE_CONFIG[subject];
     } else if (className === 'Nursery 1') {
       config = NURSERY1_CONFIG[subject];
+    } else if (className === 'Nursery 2') {
+      const NURSERY2_CONFIG: Record<string, SubjectConfig> = {
+        'Literacy': { range: 'B2:J31', totalIdx: 7, posIdx: 8, posCol: 'J', startRow: 2 },
+        'Numeracy': { range: 'B2:S31', totalIdx: 16, posIdx: 17, posCol: 'S', startRow: 2 },
+        'Colouring': { range: 'B39:J70', totalIdx: 7, posIdx: 8, posCol: 'J', startRow: 39 },
+        'Pre-writing': { range: 'B40:S70', totalIdx: 16, posIdx: 17, posCol: 'S', startRow: 40 },
+        'Pre-Writting': { range: 'B40:S70', totalIdx: 16, posIdx: 17, posCol: 'S', startRow: 40 },
+        'Writing': { range: 'B40:S70', totalIdx: 16, posIdx: 17, posCol: 'S', startRow: 40 },
+        'Writting': { range: 'B40:S70', totalIdx: 16, posIdx: 17, posCol: 'S', startRow: 40 }
+      };
+      config = NURSERY2_CONFIG[subject];
     } else if (className === 'BS 5') {
       config = BS5_CONFIG[subject];
     } else if (className === 'BS 4') {

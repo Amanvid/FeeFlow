@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { SubjectSelector } from '@/components/subject-selector';
 import { ArrowLeft, BookOpen, User, Plus, X } from 'lucide-react';
@@ -30,6 +30,7 @@ interface SBAAssessmentData {
 
 export default function ClassSBAAssessmentPage() {
   const params = useParams();
+  const router = useRouter();
   const className = params.className ? decodeURIComponent(params.className as string) : '';
   
   const [assessmentData, setAssessmentData] = useState<SBAAssessmentData | null>(null);
@@ -176,6 +177,12 @@ export default function ClassSBAAssessmentPage() {
     setEditingStudentId(student.id);
     setIsEditing(true);
     setShowForm(true);
+  };
+
+  const handleViewReport = (studentId: string, studentName: string) => {
+    const encodedId = encodeURIComponent(studentId);
+    const encodedName = encodeURIComponent(studentName);
+    router.push(`/students/${encodedId}/report?class=${encodeURIComponent(className)}&name=${encodedName}`);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -611,12 +618,18 @@ export default function ClassSBAAssessmentPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">
                         {student.position}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 space-x-4">
                         <button
                           onClick={() => handleEditStudent(student)}
                           className="text-blue-600 hover:text-blue-900 font-medium"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() => handleViewReport(student.id, student.studentName)}
+                          className="text-green-600 hover:text-green-900 font-medium"
+                        >
+                          View Report
                         </button>
                       </td>
                     </tr>
