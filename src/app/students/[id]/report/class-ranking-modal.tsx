@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 
 interface RecordRow {
   id: string
@@ -17,14 +18,12 @@ export default function ClassRankingModal({
   className,
   subject,
   totalMax,
-  records,
-  defaultOpen
+  records
 }: {
   className: string
   subject: string
   totalMax: number
   records: RecordRow[]
-  defaultOpen?: boolean
 }) {
   const sorted = useMemo(() => {
     const rows = (records || []).map(r => ({
@@ -34,11 +33,11 @@ export default function ClassRankingModal({
       position: String(r.position || '').trim(),
       subjectCount: typeof r.subjectCount === 'number' ? r.subjectCount : undefined
     }))
-    rows.sort((a, b) => b.total - a.total)
-    // Compute positions based on total (tie-aware: same score gets same position)
+    const filtered = rows.filter(r => r.studentName && r.studentName.toLowerCase() !== 'student name')
+    filtered.sort((a, b) => b.total - a.total)
     let lastScore = NaN
     let lastPosition = 0
-    const ranked = rows.map((r, i) => {
+    const ranked = filtered.map((r, i) => {
       const pos = r.total !== lastScore ? i + 1 : lastPosition
       lastScore = r.total
       lastPosition = pos
@@ -48,11 +47,11 @@ export default function ClassRankingModal({
   }, [records])
 
   return (
-    <Dialog defaultOpen={!!defaultOpen}>
+    <Dialog>
       <DialogTrigger asChild>
         <Button variant="default">View Total Score Ranking</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[70vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{className} • {subject}</DialogTitle>
         </DialogHeader>
@@ -67,14 +66,14 @@ export default function ClassRankingModal({
                 <TableHead className="w-16">Rank</TableHead>
                 <TableHead>Student</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                <TableHead className="w-24 text-right">Subjects</TableHead>
+                <TableHead className="text-right w-24">Subjects</TableHead>
                 <TableHead className="w-24">Position</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
               {sorted.map((r, i) => (
                 <TableRow key={r.id}>
-                  <TableCell>{i + 1}</TableCell>
+                  <TableCell>{r.computedPosition}</TableCell>
                   <TableCell className="font-medium">{r.studentName}</TableCell>
                   <TableCell className="text-right">{Math.round(r.total)}</TableCell>
                   <TableCell className="text-right">{typeof r.subjectCount === 'number' ? r.subjectCount : ''}</TableCell>

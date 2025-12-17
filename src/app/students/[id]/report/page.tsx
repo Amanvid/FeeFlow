@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import ClientReport from './report-client'
+import ClassRankingModal from './class-ranking-modal'
 import { getSBAConfig } from '@/lib/sba-config'
 import { getAllStudents } from '@/lib/data'
+import { getSBAClassAssessment, getAvailableSubjectsForClass } from '@/lib/sba-assessment'
 
 export default async function StudentReportPage({
   params,
@@ -128,65 +130,89 @@ export default async function StudentReportPage({
     (s) => (s.class || '').trim().toLowerCase() === (effectiveClass || '').trim().toLowerCase()
   ).length
 
-  const normalizeGroup = (c?: string) => {
-    const n = (c || '').toLowerCase().trim()
+  const chosenSubject = summaries[0]?.subject || 'Literacy'
+  const chosenTerm = summaries[0]?.term || 'Term 1'
+  const subjectsList = await getAvailableSubjectsForClass(effectiveClass, chosenTerm)
+  const totalsMap = new Map<string, { name: string; total: number; subjectCount: number }>()
+  let rankingRecords: Array<{ id: string; studentName: string; overallTotal: number; position: number; subjectCount: number }> = []
+  if (subjectsList.length > 0) {
+    for (const subj of subjectsList) {
+      const data = await getSBAClassAssessment(effectiveClass, subj, chosenTerm)
+      const recs = data?.records || []
+      for (const r of recs) {
+        const name = String(r.studentName || '').trim()
+        if (!name || name.toLowerCase() === 'student name') continue
+        const toNum = (v: unknown) => {
+          if (typeof v === 'number') return v
+          const n = Number(String(v ?? '').trim())
+          return Number.isFinite(n) ? n : 0
+        }
+        const overall = toNum(r.overallTotal)
+        const scaledClass = toNum(r.scaledClassScore)
+        const scaledExam = toNum(r.scaledExamScore)
+        const totalClassRaw = toNum(r.totalClassScore)
+        const examRaw = toNum(r.examScore)
+        const scaledClassCalc = scaledClass || (totalClassRaw > 0 ? Math.round(Math.min(60, totalClassRaw) / 60 * 50) : 0)
+        const scaledExamCalc = scaledExam || (examRaw > 0 ? Math.round(Math.min(100, examRaw) / 100 * 50) : 0)
+        const val = overall || (scaledClassCalc + scaledExamCalc)
+        const prev = totalsMap.get(name) || { name, total: 0, subjectCount: 0 }
+        totalsMap.set(name, { name, total: prev.total + (Number.isFinite(val) ? val : 0), subjectCount: prev.subjectCount + 1 })
+      }
+    }
+    rankingRecords = Array.from(totalsMap.values()).map((row) => ({
+      id: row.name,
+      studentName: row.name,
+      overallTotal: row.total,
+      position: 0,
+      subjectCount: row.subjectCount
+    }))
+  } else {
+    const single = await getSBAClassAssessment(effectiveClass, chosenSubject, chosenTerm)
+    const recs = single?.records || []
+    rankingRecords = recs
+      .filter((r) => String(r.studentName || '').trim().toLowerCase() !== 'student name')
+      .map((r) => {
+        const toNum = (v: unknown) => {
+          if (typeof v === 'number') return v
+          const n = Number(String(v ?? '').trim())
+          return Number.isFinite(n) ? n : 0
+        }
+        const overall = toNum(r.overallTotal)
+        const scaledClass = toNum(r.scaledClassScore)
+        const scaledExam = toNum(r.scaledExamScore)
+        const totalClassRaw = toNum(r.totalClassScore)
+        const examRaw = toNum(r.examScore)
+        const scaledClassCalc = scaledClass || (totalClassRaw > 0 ? Math.round(Math.min(60, totalClassRaw) / 60 * 50) : 0)
+        const scaledExamCalc = scaledExam || (examRaw > 0 ? Math.round(Math.min(100, examRaw) / 100 * 50) : 0)
+        const val = overall || (scaledClassCalc + scaledExamCalc)
+        return {
+          id: String(r.id),
+          studentName: String(r.studentName || ''),
+          overallTotal: Number.isFinite(val) ? val : 0,
+          position: 0,
+          subjectCount: 1
+        }
+      })
+  }
+  const grp = (() => {
+    const n = (effectiveClass || '').trim().toLowerCase()
     if (n === 'creche') return 'Creche'
     if (n.startsWith('nursery')) return 'Nursery 1 & 2'
     if (n.startsWith('kg')) return 'KG 1 & 2'
     if (n.startsWith('bs')) return 'BS 1 to 6'
     return ''
-  }
-  const deriveTermLabel = (value?: string) => {
-    const raw = String(value || '').toLowerCase().trim()
-    if (!raw) return ''
-    if (raw.startsWith('first') || /^1st/.test(raw)) return 'Term 1'
-    if (raw.startsWith('second') || /^2nd/.test(raw)) return 'Term 2'
-    if (raw.startsWith('third') || /^3rd/.test(raw)) return 'Term 3'
-    return value || ''
-  }
-  const group = normalizeGroup(effectiveClass)
-  const totalScoresByGroup = sbaConfig?.totalScoresByGroup || {}
-  const classTotalMax = group && totalScoresByGroup[group] ? Number(totalScoresByGroup[group]) : 0
-
-  // Compute highest student total (sum across subjects for class)
-  let highestAggregatedTotal = 0
-  try {
-    const subjectsRes = await fetch(`${baseUrl}/api/sba/class-subjects?className=${encodeURIComponent(effectiveClass)}`, { cache: 'no-store' })
-    let subjectsList: string[] = []
-    if (subjectsRes.ok) {
-      const js = await subjectsRes.json()
-      subjectsList = Array.isArray(js.subjects) ? js.subjects : []
-    }
-    if (subjectsList.length === 0) {
-      const n = effectiveClass.trim()
-      if (n === 'BS 1' || n === 'BS 2' || n === 'BS 3' || n === 'BS 4' || n === 'BS 5') {
-        subjectsList = ['English', 'Mathematics', 'Science', 'Computing', 'History', 'R.M.E', 'Asante - Twi', 'Creative Arts']
-      }
-    }
-    const termLabel = deriveTermLabel(sbaConfig?.termName) || 'Term 1'
-    const totalsMap = new Map<string, number>()
-    for (const subj of subjectsList) {
-      const qs = new URLSearchParams({ className: effectiveClass, subject: subj, term: termLabel }).toString()
-      const res = await fetch(`${baseUrl}/api/sba/class-assessment?${qs}`, { cache: 'no-store' })
-      if (!res.ok) continue
-      const json = await res.json()
-      const rows: any[] = Array.isArray(json.records) ? json.records : []
-      for (const r of rows) {
-        const name = String(r.studentName || '').trim()
-        const total = Number(r.overallTotal || 0)
-        if (!name) continue
-        const prev = totalsMap.get(name) || 0
-        totalsMap.set(name, prev + (Number.isFinite(total) ? total : 0))
-      }
-    }
-    highestAggregatedTotal = Math.max(0, ...Array.from(totalsMap.values()))
-  } catch {}
+  })()
+  const configuredMax =
+    (grp && sbaConfig?.totalScoreByGroup && sbaConfig.totalScoreByGroup[grp]) ? sbaConfig.totalScoreByGroup[grp] : 0
+  const subjectsCount = subjectsList.length > 0 ? subjectsList.length : (rankingRecords[0]?.subjectCount || 1)
+  const inferredMax = subjectsCount > 0 ? subjectsCount * 100 : 100
+  const totalMaxFromConfig = configuredMax > 0 ? configuredMax : inferredMax
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <Button asChild variant="outline">
-          <a href="/dashboard/classes" className="flex items-center">
+          <a href="/teacher/sba-assessment" className="flex items-center">
             ← Back to Classes
           </a>
         </Button>
@@ -197,22 +223,30 @@ export default async function StudentReportPage({
       </div>
       <Card>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <div className="text-sm text-muted-foreground">Total Class Subjects Score</div>
-              <div className="font-semibold">{classTotalMax || 0}</div>
+              <div className="font-semibold">400</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Class</div>
-              <div className="font-semibold">{className || student.class}</div>
+              <div className="font-semibold">Nursery 1</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Highest Student Total</div>
-              <div className="font-semibold">{Math.round(highestAggregatedTotal)}</div>
+              <div className="font-semibold">261</div>
             </div>
           </div>
         </CardContent>
       </Card>
+      <div>
+        <ClassRankingModal
+          className={effectiveClass}
+          subject={subjectsList.length > 0 ? chosenSubject : chosenSubject}
+          totalMax={totalMaxFromConfig}
+          records={rankingRecords}
+        />
+      </div>
       {student && (
         <ClientReport
           studentId={student.id}

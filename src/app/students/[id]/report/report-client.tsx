@@ -7,7 +7,6 @@ import type { SchoolConfig } from '@/lib/definitions'
 import type { SBAConfig } from '@/lib/sba-config'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
-import ClassRankingModal from './class-ranking-modal'
 
 
 export default function ClientReport({
@@ -69,7 +68,6 @@ export default function ClientReport({
     grade: string
     remarks: string
   }>>([])
-  const [classRecords, setClassRecords] = useState<any[]>([])
 
   useEffect(() => {
     const loadStudent = async () => {
@@ -150,84 +148,6 @@ export default function ClientReport({
     }
     loadAssessment()
   }, [studentId, className, subject, term])
-
-  useEffect(() => {
-    const loadAggregatedClassTotals = async () => {
-      if (!className || !term) {
-        setClassRecords([])
-        return
-      }
-      const effectiveSubjects =
-        subjects.length > 0
-          ? subjects
-          : (() => {
-              const n = className.trim()
-              if (n === 'BS 1' || n === 'BS 2' || n === 'BS 3' || n === 'BS 4' || n === 'BS 5') {
-                return ['English', 'Mathematics', 'Science', 'Computing', 'History', 'R.M.E', 'Asante - Twi', 'Creative Arts']
-              }
-              return []
-            })()
-      if (effectiveSubjects.length === 0) {
-        setClassRecords([])
-        return
-      }
-      const aggregate: Record<string, { studentName: string; total: number; subjectCount: number }> = {}
-      const promises = effectiveSubjects.map(async (subj) => {
-        const qs = new URLSearchParams({ className, subject: subj, term }).toString()
-        const res = await fetch(`/api/sba/class-assessment?${qs}`, { cache: 'no-store' })
-        if (!res.ok) return []
-        const json = await res.json()
-        const rows = Array.isArray(json.records) ? json.records : []
-        return rows
-      })
-      const perSubjectRecords = await Promise.all(promises)
-      perSubjectRecords.flat().forEach((rec: any) => {
-        const name = String(rec.studentName || '').trim()
-        if (!name) return
-        const total = Number(rec.overallTotal || 0)
-        if (!aggregate[name]) {
-          aggregate[name] = { studentName: name, total: 0, subjectCount: 0 }
-        }
-        aggregate[name].total += Number.isFinite(total) ? total : 0
-        aggregate[name].subjectCount += Number.isFinite(total) && total > 0 ? 1 : 0
-      })
-      const aggregatedRows = Object.values(aggregate).map((r) => ({
-        id: r.studentName,
-        studentName: r.studentName,
-        overallTotal: r.total,
-        subjectCount: r.subjectCount,
-        position: ''
-      }))
-      setClassRecords(aggregatedRows)
-    }
-    loadAggregatedClassTotals()
-  }, [className, term, subjects])
-
-  const classPositionMap = useMemo(() => {
-    const rows = (classRecords || []).map(r => ({
-      name: String(r.studentName || '').trim(),
-      total: Number(r.overallTotal || 0)
-    }))
-    rows.sort((a, b) => b.total - a.total)
-    let lastScore = NaN
-    let lastPosition = 0
-    const posMap = new Map<string, number>()
-    rows.forEach((r, i) => {
-      const pos = r.total !== lastScore ? i + 1 : lastPosition
-      lastScore = r.total
-      lastPosition = pos
-      if (r.name) posMap.set(r.name, pos)
-    })
-    return posMap
-  }, [classRecords])
-
-  const ordinal = (n?: number) => {
-    if (!n || n <= 0 || !Number.isFinite(n)) return ''
-    const s = ['th', 'st', 'nd', 'rd']
-    const v = n % 100
-    const suffix = s[(v - 20) % 10] || s[v] || s[0]
-    return `${n}${suffix}`
-  }
 
   // If term is still empty but we have SBA config later, fill it
   useEffect(() => {
@@ -393,25 +313,6 @@ export default function ClientReport({
           }
         }
       `}</style>
-      <div className="self-end mb-2 print:hidden">
-        <ClassRankingModal
-          className={className}
-          subject={subject || ''}
-          totalMax={(() => {
-            const n = (className || '').toLowerCase().trim()
-            const group =
-              n === 'creche' ? 'Creche' :
-              n.startsWith('nursery') ? 'Nursery 1 & 2' :
-              n.startsWith('kg') ? 'KG 1 & 2' :
-              n.startsWith('bs') ? 'BS 1 to 6' : ''
-            const scores = sba?.totalScoresByGroup || sbaConfig?.totalScoresByGroup || {}
-            const val = group && scores[group] ? Number(scores[group]) : 0
-            return Number.isFinite(val) && val > 0 ? val : (subjects.length || 0) * 100
-          })()}
-          records={classRecords}
-          defaultOpen
-        />
-      </div>
       <div id="report-card" className="w-full max-w-[210mm] print:max-w-none bg-white p-8 relative min-h-[297mm] shadow-lg print:shadow-none print:p-0">
         
         {/* Watermark */}
@@ -477,9 +378,7 @@ export default function ClientReport({
                     </div>
                     <div className="w-[30%] text-right flex justify-end gap-2 mt-1 pr-4">
                         <span className="italic">Position:</span>
-                        <span className="font-bold text-center">
-                          {ordinal(classPositionMap.get(String(student?.studentName || '').trim())) || ordinal(typeof assessment?.position === 'number' ? assessment?.position : parseInt(String(assessment?.position || ''), 10)) || '4th'}
-                        </span>
+                        <span className="font-bold text-center">{sbaConfig?.position || assessment?.position || '4th'}</span>
                     </div>
                 </div>
 

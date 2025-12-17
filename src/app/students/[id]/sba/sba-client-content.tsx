@@ -20,6 +20,15 @@ interface SBAClientContentProps {
   availableSubjects: string[];
   initialSubject: string;
   initialAssessmentData: any;
+  onSubmitAssessment: (data: {
+    studentId: string;
+    subject: string;
+    assessmentType: string;
+    score: number;
+    maxScore: number;
+    term: string;
+    className: string;
+  }) => Promise<void>;
   sbaConfig: SBAConfig;
 }
 
@@ -30,6 +39,7 @@ export function SBAClientContent({
   availableSubjects, 
   initialSubject, 
   initialAssessmentData,
+  onSubmitAssessment,
   sbaConfig
 }: SBAClientContentProps) {
   const router = useRouter();
@@ -70,37 +80,23 @@ export function SBAClientContent({
     setAssessmentData(initialAssessmentData);
   }, [initialAssessmentData]);
 
-  const handleSubmitAssessment = async (data: {
-    studentId: string;
-    subject: string;
-    assessmentType: string;
-    score: number;
-    maxScore: number;
-    term: string;
-    className: string;
-  }): Promise<void> => {
-    try {
-      const response = await fetch('/api/sba/update-student', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to submit assessment');
-      }
-      // optionally refresh class assessment after submit
-      try {
-        const refreshed = await fetch(`/api/sba/class-assessment?className=${encodeURIComponent(className)}&subject=${encodeURIComponent(currentSubject)}&term=${encodeURIComponent(term)}`);
-        if (refreshed.ok) {
-          const refreshedData = await refreshed.json();
-          setAssessmentData(refreshedData);
-        }
-      } catch {}
-    } catch (err) {
-      console.error('Error submitting assessment:', err);
-      throw err;
-    }
-  };
+  const totalClassSubjectsScore =
+    Array.isArray(assessmentData?.records)
+      ? assessmentData.records.reduce(
+          (sum: number, r: any) =>
+            sum + (typeof r.overallTotal === 'number' ? r.overallTotal : 0),
+          0
+        )
+      : 0;
+
+  const highestStudentTotal =
+    Array.isArray(assessmentData?.records) && assessmentData.records.length > 0
+      ? Math.max(
+          ...assessmentData.records.map((r: any) =>
+            typeof r.overallTotal === 'number' ? r.overallTotal : 0
+          )
+        )
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -112,40 +108,22 @@ export function SBAClientContent({
         <Badge variant="secondary">{currentSubject}</Badge>
       </div>
 
-      {/* SBA Config Display */}
       <Card>
         <CardContent className="pt-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <span className="text-muted-foreground">Campus:</span>
-              <p className="font-medium">{sbaConfig.campus}</p>
+              <span className="text-muted-foreground">Total Class Subjects Score</span>
+              <p className="font-medium">{totalClassSubjectsScore}</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Total Attendance:</span>
-              <p className="font-medium">{sbaConfig.totalAttendance}</p>
+              <span className="text-muted-foreground">Class</span>
+              <p className="font-medium">{className}</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Closing Term:</span>
-              <p className="font-medium">{sbaConfig.closingTerm}</p>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Next Term Begins:</span>
-              <p className="font-medium">{sbaConfig.nextTermBegins}</p>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Semester/Term:</span>
-              <p className="font-medium">{sbaConfig.termName}</p>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Position:</span>
-              <p className="font-medium">{sbaConfig.position}</p>
+              <span className="text-muted-foreground">Highest Student Total</span>
+              <p className="font-medium">{highestStudentTotal}</p>
             </div>
           </div>
-          {sbaConfig.includePosition && (
-            <div className="mt-4">
-              <Badge variant="outline">Position Tracking: Enabled</Badge>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -201,7 +179,7 @@ export function SBAClientContent({
           students={[{ id: student.id, name: student.studentName }]}
           subjects={[currentSubject]}
           classes={[className]}
-          onSubmit={handleSubmitAssessment}
+          onSubmit={onSubmitAssessment}
         />
       </div>
     </div>
