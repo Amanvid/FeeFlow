@@ -16,9 +16,9 @@ export async function GET() {
       class: t.class,
       role: t.role,
       status: t.status,
-      passwordLength: t.password?.length || 0,
-      passwordFirstChar: t.password?.substring(0, 1) || '',
-      passwordLastChar: t.password?.substring(t.password?.length - 1) || ''
+      passwordLength: t.password.length,
+      passwordFirstChar: t.password.substring(0, 1),
+      passwordLastChar: t.password.substring(t.password.length - 1)
     }));
     
     return NextResponse.json({ 

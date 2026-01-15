@@ -10,7 +10,7 @@ This guide explains how to deploy FeeFlow to Vercel with Google Sheets as the pr
 ## Environment Variables
 
 Set these environment variables in your Vercel dashboard:
-
+cxxxxf   
 ```bash
 # Required - Google Sheets Configuration
 NEXT_PUBLIC_SPREADSHEET_ID=1WHkw5YaVbnHjWD2nwTcYnQfIYV7PxascjEzY7FqL4Ew

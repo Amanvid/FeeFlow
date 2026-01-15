@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import TeacherNav from '@/components/teacher/teacher-nav';
+import { NotificationBanner } from '@/components/ui/notification-banner';
 
 interface ClassData {
   name: string;
@@ -30,8 +31,6 @@ export default function TeacherClassesPage() {
       if (result.success) {
         setTeacherName(result.teacher.name);
       } else {
-        console.log('Failed to fetch teacher info, redirecting to login');
-        // Redirect to login if not authenticated
         router.push('/teacher/login');
       }
     } catch (error) {
@@ -42,17 +41,28 @@ export default function TeacherClassesPage() {
 
   const fetchClasses = async () => {
     try {
+      setIsLoading(true);
+      setError('');
+
       const response = await fetch('/api/teacher/classes');
       const result = await response.json();
       
-      if (result.success) {
-        setClasses(result.classes);
-      } else {
-        setError('Failed to fetch classes');
+      if (!response.ok || !result.success) {
+        if (response.status === 401) {
+          setError('Your session has expired. Please log in again.');
+          router.push('/teacher/login');
+        } else {
+          setError(result.message || 'Failed to fetch classes');
+        }
+        setClasses([]);
+        return;
       }
+
+      setClasses(result.classes);
     } catch (error) {
       console.error('Error fetching classes:', error);
       setError('Failed to fetch classes');
+      setClasses([]);
     } finally {
       setIsLoading(false);
     }
@@ -103,8 +113,12 @@ export default function TeacherClassesPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
+          <div className="mb-6">
+            <NotificationBanner
+              variant={error.startsWith('Your session has expired') ? 'warning' : 'error'}
+              title={error.startsWith('Your session has expired') ? 'Session Expired' : 'Error'}
+              message={error}
+            />
           </div>
         )}
 

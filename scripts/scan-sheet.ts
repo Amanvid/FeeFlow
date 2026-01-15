@@ -17,7 +17,7 @@ if (fs.existsSync(envPath)) {
 
 async function main() {
   try {
-    const { GoogleSheetsService } = await import('../src/lib/google-sheets');
+    const { GoogleSheetsService } = await import('../src/lib/google-sheets.ts');
     console.log('Service Account Email:', process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
     const sheetsService = new GoogleSheetsService();
     // Scan columns for Nursery 1 Numeracy (L-S)

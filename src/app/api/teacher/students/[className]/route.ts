@@ -1,79 +1,114 @@
-import { NextResponse } from 'next/server';
-import { verifySession } from '@/lib/session';
-import { getAllStudents, getSchoolConfig } from '@/lib/data';
+import { NextResponse } from 'next/server'
+import { verifySession } from '@/lib/session'
+import { getAllStudents, getSchoolConfig, getTeacherUsers } from '@/lib/data'
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ className: string }> }
 ) {
   try {
-    const session = await verifySession();
-    
-    if (!session || session.userType !== 'teacher') {
+    const session = await verifySession()
+
+    if (!session || (session.userType !== 'teacher' && session.userType !== 'admin')) {
       return NextResponse.json(
         { success: false, message: 'Unauthorized' },
         { status: 401 }
-      );
+      )
     }
 
-    const { className } = await params;
-    
+    const { className } = await params
+
     if (!className) {
       return NextResponse.json(
         { success: false, message: 'Class name is required' },
         { status: 400 }
-      );
+      )
     }
 
-    // Decode the class name (replace %20 with spaces, etc.)
-    const decodedClassName = decodeURIComponent(className);
+    const decodedClassName = decodeURIComponent(className)
 
-    // Get school config for due date
-    const schoolConfig = await getSchoolConfig();
-    
-    // Get all students and filter by class
-    const students = await getAllStudents();
-    const classStudents = students.filter(student => 
+    if (session.userType === 'teacher') {
+      const username = session.username
+
+      if (!username) {
+        return NextResponse.json(
+          { success: false, message: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      const teachers = await getTeacherUsers()
+      const teacher = teachers.find(t => t.username === username && t.status === 'active')
+
+      if (!teacher) {
+        return NextResponse.json(
+          { success: false, message: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      const requestedClass = decodedClassName.trim().toLowerCase()
+      const teacherClasses = (teacher.class || '')
+        .split(',')
+        .map(c => c.trim().toLowerCase())
+        .filter(c => c.length > 0)
+
+      const hasAccess = teacherClasses.includes(requestedClass)
+
+      if (!hasAccess) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Access Denied: You do not have permission to view this class.'
+          },
+          { status: 403 }
+        )
+      }
+    }
+
+    const schoolConfig = await getSchoolConfig()
+
+    const students = await getAllStudents()
+    const classStudents = students.filter(student =>
       student.class === decodedClassName
-    );
+    )
 
-    // Transform student data for teacher view - detailed fee breakdown like admin page
     const transformedStudents = classStudents.map(student => ({
       id: student.id,
-      name: student.studentName, // Use studentName from getAllStudents
+      name: student.studentName,
       class: student.class,
-      parentName: student.guardianName, // Use guardianName from getAllStudents
-      parentPhone: student.guardianPhone, // Use guardianPhone from getAllStudents
-      parentEmail: '', // Not available in getAllStudents
-      location: 'Not specified', // Not available in getAllStudents
-      payments: [], // Not available in getAllStudents - would need separate sheet
+      parentName: student.guardianName,
+      parentPhone: student.guardianPhone,
+      parentEmail: '',
+      location: 'Not specified',
+      payments: [],
       feeBreakdown: {
-        lastTermArrears: student.arrears, // From ARREAS column
-        currentTermFees: student.fees,     // From School Fees AMOUNT column
-        books: student.books                // From BOOKS Fees column
+        lastTermArrears: student.arrears,
+        currentTermFees: student.fees,
+        books: student.books
       },
       paymentBreakdown: {
-        feesPaid: student.schoolFeesPaid,    // INTIAL AMOUNT PAID + PAYMENT
-        booksPaid: student.booksFeePaid    // BOOKS Fees Payment
+        feesPaid: student.schoolFeesPaid,
+        booksPaid: student.booksFeePaid
       },
-      totalFees: student.fees + student.books + student.arrears, // Calculate total fees like admin page
-      amountPaid: student.schoolFeesPaid + student.booksFeePaid, // Total amount paid
-      balance: student.balance, // Use balance from getAllStudents (Total Balance from sheet)
-      dueDate: schoolConfig.dueDate, // Use due date from config sheet
-      status: student.balance <= 0 ? 'Paid' : 'Balance Due' // Calculate status based on balance
-    }));
+      totalFees: student.fees + student.books + student.arrears,
+      amountPaid: student.schoolFeesPaid + student.booksFeePaid,
+      balance: student.balance,
+      dueDate: schoolConfig.dueDate,
+      status: student.balance <= 0 ? 'Paid' : 'Balance Due'
+    }))
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       students: transformedStudents,
       className: decodedClassName,
       totalStudents: transformedStudents.length
-    });
+    })
   } catch (error) {
-    console.error('Teacher students API error:', error);
+    console.error('Teacher students API error:', error)
     return NextResponse.json(
       { success: false, message: 'An internal server error occurred' },
       { status: 500 }
-    );
+    )
   }
 }

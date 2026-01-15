@@ -31,8 +31,8 @@ export default async function StudentSBAPage({
   // If no subjects found, add the default subject
   const subjects = availableSubjects.length > 0 ? availableSubjects : [subject];
   
-  // Fetch initial assessment data
-  const initialAssessmentData = await getSBAClassAssessment(className, subject, term);
+  // Fetch initial assessment data for ALL subjects (pass empty string for subject)
+  const initialAssessmentData = await getSBAClassAssessment(className, '', term);
 
   return (
     <SBAClientContent

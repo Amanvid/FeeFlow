@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { SBAClassAssessment } from '@/components/sba-class-assessment';
-import { StudentAssessmentForm } from '@/components/student-assessment-form';
-import { SubjectSelector } from '@/components/subject-selector';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SBAConfig } from '@/lib/sba-config';
 
 interface SBAClientContentProps {
@@ -20,15 +19,7 @@ interface SBAClientContentProps {
   availableSubjects: string[];
   initialSubject: string;
   initialAssessmentData: any;
-  onSubmitAssessment: (data: {
-    studentId: string;
-    subject: string;
-    assessmentType: string;
-    score: number;
-    maxScore: number;
-    term: string;
-    className: string;
-  }) => Promise<void>;
+  onSubmitAssessment: (data: any) => Promise<void>;
   sbaConfig: SBAConfig;
 }
 
@@ -37,151 +28,114 @@ export function SBAClientContent({
   className, 
   term, 
   availableSubjects, 
-  initialSubject, 
   initialAssessmentData,
-  onSubmitAssessment,
-  sbaConfig
 }: SBAClientContentProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [currentSubject, setCurrentSubject] = useState(initialSubject);
   const [assessmentData, setAssessmentData] = useState(initialAssessmentData);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubjectChange = async (subject: string) => {
-    setIsLoading(true);
-    setCurrentSubject(subject);
-    
-    // Update URL search params
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('subject', subject);
-    router.push(`?${params.toString()}`);
-    
-    try {
-      // Fetch new assessment data for the selected subject
-      const response = await fetch(`/api/sba/class-assessment?className=${encodeURIComponent(className)}&subject=${encodeURIComponent(subject)}&term=${encodeURIComponent(term)}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        setAssessmentData(data);
-      } else {
-        setAssessmentData(null);
-      }
-    } catch (error) {
-      console.error('Error fetching assessment data:', error);
-      setAssessmentData(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Update assessment data when initial data changes
   useEffect(() => {
     setAssessmentData(initialAssessmentData);
   }, [initialAssessmentData]);
 
-  const totalClassSubjectsScore =
-    Array.isArray(assessmentData?.records)
-      ? assessmentData.records.reduce(
-          (sum: number, r: any) =>
-            sum + (typeof r.overallTotal === 'number' ? r.overallTotal : 0),
-          0
-        )
-      : 0;
-
-  const highestStudentTotal =
-    Array.isArray(assessmentData?.records) && assessmentData.records.length > 0
-      ? Math.max(
-          ...assessmentData.records.map((r: any) =>
-            typeof r.overallTotal === 'number' ? r.overallTotal : 0
-          )
-        )
-      : 0;
+  // Filter records for this specific student
+  const studentRecords = assessmentData?.records?.filter((record: any) => 
+    String(record.studentName || '').trim().toLowerCase() === String(student.studentName || '').trim().toLowerCase()
+  ) || [];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">SBA Assessment</h1>
-          <p className="text-muted-foreground">{className} • {currentSubject} • {term}</p>
+          <p className="text-muted-foreground">{className} • {term}</p>
         </div>
-        <Badge variant="secondary">{currentSubject}</Badge>
+        <Badge variant="outline" className="text-lg">{student.studentName}</Badge>
       </div>
 
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <span className="text-muted-foreground">Total Class Subjects Score</span>
-              <p className="font-medium">{totalClassSubjectsScore}</p>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Class</span>
-              <p className="font-medium">{className}</p>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Highest Student Total</span>
-              <p className="font-medium">{highestStudentTotal}</p>
-            </div>
+        <CardHeader>
+          <CardTitle>Student SBA Report</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead rowSpan={2} className="w-[50px]">No.</TableHead>
+                  <TableHead rowSpan={2} className="min-w-[150px]">Subject</TableHead>
+                  <TableHead colSpan={2} className="text-center border-l">Class Score</TableHead>
+                  <TableHead rowSpan={2} className="text-center border-l bg-muted/50">Total Class Score<br/>(60 marks)</TableHead>
+                  <TableHead rowSpan={2} className="text-center border-l">60 MKS SCALED<br/>TO (50%)</TableHead>
+                  <TableHead colSpan={2} className="text-center border-l border-r">End of Term Exam</TableHead>
+                  <TableHead rowSpan={2} className="text-center">Overall Total</TableHead>
+                  <TableHead rowSpan={2} className="text-center border-l">Position</TableHead>
+                  <TableHead rowSpan={2} className="text-center border-l">Actions</TableHead>
+                </TableRow>
+                <TableRow>
+                  <TableHead className="text-center border-l text-xs">Indv. Test<br/>(30mks)</TableHead>
+                  <TableHead className="text-center border-r text-xs">Class Test<br/>(30mks)</TableHead>
+                  <TableHead className="text-center text-xs">100 MKS</TableHead>
+                  <TableHead className="text-center border-l text-xs">100 MKS SCALED<br/>TO (50%)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {studentRecords.length > 0 ? (
+                  studentRecords.map((record: any, index: number) => (
+                    <TableRow key={record.id || index}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell className="font-medium">{record.subject}</TableCell>
+                      
+                      {/* Class Score Breakdown */}
+                      <TableCell className="text-center border-l">{record.individualTestScore || record.individualTest || '-'}</TableCell>
+                      <TableCell className="text-center border-r">{record.classTestScore || record.classTest || '-'}</TableCell>
+                      
+                      {/* Total Class Score (60) */}
+                      <TableCell className="text-center bg-muted/50 font-bold">
+                        {record.totalClassScore || '-'}
+                      </TableCell>
+                      
+                      {/* Scaled Class Score (50%) */}
+                      <TableCell className="text-center border-l">
+                        {record.scaledClassScore || record.scaledTo30 || '-'}
+                      </TableCell>
+                      
+                      {/* Exam Score (100) */}
+                      <TableCell className="text-center border-l">
+                        {record.examScore || record.endOfTermExam || '-'}
+                      </TableCell>
+                      
+                      {/* Scaled Exam Score (50%) */}
+                      <TableCell className="text-center border-l border-r">
+                        {record.scaledExamScore || record.scaledTo70 || '-'}
+                      </TableCell>
+                      
+                      {/* Overall Total */}
+                      <TableCell className="text-center font-bold">
+                        {record.overallTotal || '-'}
+                      </TableCell>
+                      
+                      {/* Position */}
+                      <TableCell className="text-center border-l">
+                        {record.position || '-'}
+                      </TableCell>
+                      
+                      {/* Actions */}
+                      <TableCell className="text-center border-l">
+                        <Button variant="ghost" size="sm">Report</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={11} className="text-center h-24 text-muted-foreground">
+                      No assessment records found for this student.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
-
-      {/* Subject Selector */}
-      <SubjectSelector
-        currentSubject={currentSubject}
-        availableSubjects={availableSubjects}
-        onSubjectChange={handleSubjectChange}
-      />
-
-      {/* Loading state */}
-      {isLoading && (
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Loading assessment data...</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Class-wide assessment view */}
-      {!isLoading && assessmentData && (
-        <SBAClassAssessment
-          teacherName={assessmentData.teacherName}
-          subject={assessmentData.subject}
-          className={assessmentData.className}
-          records={assessmentData.records.map((record: any) => ({
-            id: record.id,
-            studentName: record.studentName,
-            individualTestScore: record.individualTest,
-            classTestScore: record.classTest,
-            totalClassScore: record.totalClassScore,
-            scaledClassScore: record.scaledTo30,
-            examScore: record.endOfTermExam,
-            scaledExamScore: record.scaledTo70,
-            overallTotal: record.overallTotal,
-            position: record.position
-          }))}
-        />
-      )}
-
-      {!isLoading && !assessmentData && (
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">No SBA class assessment data found for {currentSubject} - {term}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Add assessment form */}
-      <div className="border-t pt-6">
-        <h2 className="text-2xl font-bold tracking-tight mb-4">Add New Assessment</h2>
-        <StudentAssessmentForm
-          students={[{ id: student.id, name: student.studentName }]}
-          subjects={[currentSubject]}
-          classes={[className]}
-          onSubmit={onSubmitAssessment}
-        />
-      </div>
     </div>
   );
 }

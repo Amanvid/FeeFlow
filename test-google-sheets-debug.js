@@ -74,8 +74,9 @@ async function debugGoogleSheets() {
     // Test 3: Try using our service methods
     console.log('\n🔧 Test 3: Testing service methods...');
     try {
-      // Try with just the sheet name without range first
-      const result = await sheetsService.getSheetData('Sheet1', 'A1:E5');
+      // Try with an existing sheet name (using 'Metadata' as seen in Test 1)
+      const sheetName = 'Metadata'; 
+      const result = await sheetsService.getSheetData(sheetName, 'A1:E5');
       if (result.success) {
         console.log('✅ Service method worked!');
         console.log('Data:', result.data);

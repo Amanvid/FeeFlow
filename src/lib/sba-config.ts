@@ -11,7 +11,6 @@ export interface SBAConfig {
   position: string;
   includePosition: boolean;
   feesByGroup?: Record<string, number>;
-  totalScoreByGroup?: Record<string, number>;
 }
 
 export async function getSBAConfig(): Promise<SBAConfig> {
@@ -23,8 +22,7 @@ export async function getSBAConfig(): Promise<SBAConfig> {
     termName: "Second",
     position: "4th",
     includePosition: true,
-    feesByGroup: {},
-    totalScoreByGroup: {}
+    feesByGroup: {}
   };
 
   try {
@@ -151,30 +149,6 @@ export async function getSBAConfig(): Promise<SBAConfig> {
         config.includePosition = /^(yes|true|1)$/i.test(v);
       }
     }
-
-    try {
-      const totalsRange = await sheets.getSheetData("SBA Config", "N1:Q3");
-      if (totalsRange.success && totalsRange.data && totalsRange.data.length >= 2) {
-        const headerRow = totalsRange.data[0] as any[];
-        const valuesRow = totalsRange.data[1] as any[];
-        const map: Record<string, number> = {};
-        for (let i = 0; i < headerRow.length; i++) {
-          const keyRaw = String(headerRow[i] || "").trim();
-          const valRaw = String(valuesRow[i] || "").trim();
-          const key = keyRaw.toLowerCase();
-          const val = Number(valRaw.replace(/[^\d.]/g, ""));
-          if (!key || !Number.isFinite(val) || val <= 0) continue;
-          if (key.includes("creche")) map["Creche"] = val;
-          else if (key.includes("nursery")) map["Nursery 1 & 2"] = val;
-          else if (key.includes("kg")) map["KG 1 & 2"] = val;
-          else if (key.includes("bs")) map["BS 1 to 6"] = val;
-        }
-        if (Object.keys(map).length > 0) {
-          defaults.totalScoreByGroup = map;
-          (config as SBAConfig).totalScoreByGroup = map;
-        }
-      }
-    } catch {}
 
     return config;
   } catch (error) {

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Mail, Phone, Search, User, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import TeacherNav from '@/components/teacher/teacher-nav';
+import { NotificationBanner } from '@/components/ui/notification-banner';
 
 interface StaffMember {
   id: string;
@@ -31,6 +32,7 @@ export default function StaffContactsPage() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [teacherName, setTeacherName] = useState('');
   const [staffCounts, setStaffCounts] = useState({ teachers: 0, nonTeachingStaff: 0, total: 0 });
+  const [error, setError] = useState('');
   const { toast } = useToast();
   const router = useRouter();
 
@@ -46,9 +48,13 @@ export default function StaffContactsPage() {
       
       if (result.success) {
         setTeacherName(result.teacher.name);
+      } else {
+        setError('Your session has expired. Please log in again.');
+        router.push('/teacher/login');
       }
     } catch (error) {
       console.error('Error fetching teacher info:', error);
+      setError('Failed to load teacher information');
     }
   };
 
@@ -74,15 +80,17 @@ export default function StaffContactsPage() {
         setStaff(result.staff);
         setStaffCounts(result.counts);
       } else {
+        setError(result.error || 'Failed to load staff contacts');
         console.error('Failed to fetch staff data:', result.error);
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'Failed to load staff contacts'
+          description: result.error || 'Failed to load staff contacts'
         });
       }
     } catch (error) {
       console.error('Error fetching staff data:', error);
+      setError('Failed to load staff contacts');
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -164,6 +172,16 @@ export default function StaffContactsPage() {
             <span>Non-teaching: {staffCounts.nonTeachingStaff}</span>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-6">
+            <NotificationBanner
+              variant={error.startsWith('Your session has expired') ? 'warning' : 'error'}
+              title={error.startsWith('Your session has expired') ? 'Session Expired' : 'Error'}
+              message={error}
+            />
+          </div>
+        )}
 
         {/* Search and Filter */}
         <Card className="mb-6">

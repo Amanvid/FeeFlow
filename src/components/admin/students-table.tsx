@@ -73,6 +73,12 @@ export default function StudentsTable({ students }: { students: Student[] }) {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
   
+  const openReminderDialog = (student: Student) => {
+    setSelectedStudent(student);
+    setManualPhoneNumber(student.guardianPhone || "");
+    setIsReminderDialog(true);
+  };
+  
   const handleMakePayment = (student: Student) => {
     const params = new URLSearchParams({
         purchaseType: 'fee',
@@ -94,8 +100,7 @@ export default function StudentsTable({ students }: { students: Student[] }) {
     }
     
     if (!studentWithPhone.guardianPhone) {
-      setSelectedStudent(student);
-      setIsReminderDialog(true);
+      toast({ variant: "destructive", title: "Cannot Send", description: "Please provide a guardian phone number." });
       return;
     }
 
@@ -203,7 +208,7 @@ export default function StudentsTable({ students }: { students: Student[] }) {
                         size="sm"
                         variant="outline"
                         disabled={loadingReminder === student.id || student.balance <= 0}
-                        onClick={() => handleSendReminder(student)}
+                        onClick={() => openReminderDialog(student)}
                         title="Send SMS reminder"
                       >
                         {loadingReminder === student.id ? (
@@ -292,7 +297,7 @@ export default function StudentsTable({ students }: { students: Student[] }) {
           <DialogHeader>
             <DialogTitle>Send Fee Reminder</DialogTitle>
             <DialogDescription>
-              No phone number found for {selectedStudent?.studentName}. Please enter a guardian's phone number to send the reminder.
+              Confirm or edit the guardian's phone number for {selectedStudent?.studentName} before sending the reminder.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

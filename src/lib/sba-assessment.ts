@@ -99,19 +99,19 @@ export async function getSBAAssessmentData(studentId: string, className: string,
       return {
         id,
         studentName: data.studentName,
-        individualTestScore: individualTestAvg,
-        classTestScore: classTestAvg,
+        individualTest: individualTestAvg,
+        classTest: classTestAvg,
         totalClassScore,
-        scaledClassScore: scaledTo30,
-        examScore: endOfTermExamAvg,
-        scaledExamScore: scaledTo70,
+        scaledTo30,
+        endOfTermExam: endOfTermExamAvg,
+        scaledTo70,
         overallTotal,
         position: 0 // Will be calculated after sorting
       };
     });
 
     // Sort by overall total and assign positions
-    assessmentRecords.sort((a, b) => Number(b.overallTotal) - Number(a.overallTotal));
+    assessmentRecords.sort((a, b) => b.overallTotal - a.overallTotal);
     assessmentRecords.forEach((record, index) => {
       record.position = index + 1;
     });
@@ -140,6 +140,23 @@ export async function getStudentSBAAssessment(studentId: string, className: stri
 
 export async function getAvailableSubjectsForClass(className: string, term: string): Promise<string[]> {
   try {
+    // For Creche, return the fixed list of subjects
+    if (className === 'Creche') {
+      return ['Literacy', 'Numeracy', 'Colouring', 'Creative Arts', 'Science'];
+    }
+
+    // For other classes, fetch from the class-specific sheet
+    const classData = await getSBAClassDataFromSheet(className, '', term);
+    
+    if (classData && classData.records.length > 0) {
+      // Get unique subjects from the records
+      const subjects = [...new Set(classData.records.map(record => record.subject))].filter(s => s);
+      if (subjects.length > 0) {
+        return subjects.sort();
+      }
+    }
+    
+    // Fallback to the generic SBA records if class sheet is empty or yields no subjects
     const allRecords = await getSBARecords();
     
     // Filter records for the specific class and term

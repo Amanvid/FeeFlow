@@ -422,6 +422,28 @@ const parseCurrency = (value: string | undefined): number => {
     return isNaN(number) ? 0 : number;
 };
 
+function getGuardianPhoneFromRow(row: any): string {
+  const candidates = [
+    "contact",
+    "parent contact",
+    "parent phone",
+    "guardian phone",
+    "guardian contact",
+    "phone",
+    "phone number",
+  ];
+  for (const key in row) {
+    const normalized = key.trim().toLowerCase();
+    if (candidates.includes(normalized)) {
+      const value = row[key];
+      if (typeof value === "string" && value.trim()) {
+        return value.trim();
+      }
+    }
+  }
+  return "";
+}
+
 
 export async function getAllStudents(): Promise<Student[]> {
     const maxRetries = 3;
@@ -503,7 +525,7 @@ export async function getAllStudents(): Promise<Student[]> {
                     booksFeePaid: booksFeePayment,
                     gender: gender,
                     guardianName: s['Parent Name'] || '',
-                    guardianPhone: s['Contact'] || '',
+                    guardianPhone: getGuardianPhoneFromRow(s),
                 };
                 return student;
             }).filter(s => s.studentName && s.class);

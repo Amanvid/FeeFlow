@@ -6,17 +6,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getAllClaims, getAllStudents, getTeacherUsers } from "@/lib/data";
-import ClaimsTable from "@/components/admin/claims-table";
+import { getAllStudents, getTeacherUsers, getNonTeacherUsers } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import ClassEnrollmentChart from "@/components/admin/charts/class-enrollment-chart";
+import StaffStatusPieChart from "@/components/admin/staff-status-pie-chart";
+import GenderPieChart from "@/components/admin/gender-pie-chart";
 
 export default async function AdminDashboard() {
-  const claims = await getAllClaims();
   const students = await getAllStudents();
   const teachers = await getTeacherUsers();
+  const nonTeachers = await getNonTeacherUsers();
 
-  const totalClaims = claims.length;
   // Corrected: Calculate total outstanding balance from the students data source of truth.
   const totalBalanceDue = students.reduce((acc, student) => acc + student.balance, 0);
   
@@ -84,6 +84,10 @@ export default async function AdminDashboard() {
   const newAdmissions = students.filter(s => s.studentType === 'New').length;
   const oldStudents = students.filter(s => s.studentType === 'Old').length;
 
+  const activeTeachers = teachers.filter(t => t.status === "active").length;
+  const activeNonTeachers = nonTeachers.filter(n => n.status === "active").length;
+  const totalStaff = teachers.length + nonTeachers.length;
+
   // Process data for chart
   const classEnrollment = students.reduce((acc, student) => {
     if (student.class) {
@@ -138,12 +142,6 @@ export default async function AdminDashboard() {
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Financial Overview */}
-        <StatCard 
-          title="Total Invoices" 
-          value={totalClaims} 
-          description="Total number of fee checks made."
-          className="bg-blue-500"
-        />
         <StatCard 
           title="Total Collected (Overall)" 
           value={`GH₵${totalPaidOverall.toLocaleString()}`}
@@ -201,26 +199,21 @@ export default async function AdminDashboard() {
         {/* Student Payment Status - REMOVED PAYMENT STATUS CARDS */}
 
         {/* Student Demographics */}
-         <StatCard 
+        <StatCard 
           title="Total Students" 
           value={totalStudents} 
           description="Total number of students enrolled."
           className="bg-slate-700"
         />
-        <div className="lg:col-span-1 grid grid-cols-2 gap-4">
-          <SmallStatCard 
-            title="Male Students" 
-            value={maleStudents} 
-            description="Male students."
-            className="bg-indigo-500"
-          />
-          <SmallStatCard 
-            title="Female Students" 
-            value={femaleStudents} 
-            description="Female students."
-            className="bg-pink-500"
-          />
-        </div>
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Student Gender Distribution</CardTitle>
+            <CardDescription>Male vs Female students</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <GenderPieChart maleCount={maleStudents} femaleCount={femaleStudents} />
+          </CardContent>
+        </Card>
         <StatCard 
           title="New Admissions" 
           value={newAdmissions} 
@@ -234,19 +227,25 @@ export default async function AdminDashboard() {
           className="bg-lime-600"
         />
         
-        {/* Teacher Statistics */}
+        {/* Staff Statistics */}
         <StatCard 
-          title="Total Teachers" 
-          value={teachers.length} 
-          description="All registered teachers."
+          title="Total Staff" 
+          value={totalStaff} 
+          description="All teaching and non-teaching staff."
           className="bg-amber-600"
         />
-        <StatCard 
-          title="Active Teachers" 
-          value={teachers.filter(t => t.status === 'active').length} 
-          description="Currently active teaching staff."
-          className="bg-emerald-600"
-        />
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Staff Activity Status</CardTitle>
+            <CardDescription>Active teachers vs non-teachers</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StaffStatusPieChart
+              activeTeachersCount={activeTeachers}
+              activeNonTeachersCount={activeNonTeachers}
+            />
+          </CardContent>
+        </Card>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
         <Card className="lg:col-span-7">
@@ -259,7 +258,6 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
-      <ClaimsTable claims={claims} />
     </>
   );
 }

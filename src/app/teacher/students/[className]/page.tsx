@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { NotificationBanner } from '@/components/ui/notification-banner';
 
 interface Student {
   id: string;
@@ -51,7 +52,7 @@ export default function TeacherStudentsPage() {
     try {
       const response = await fetch('/api/auth/teacher-session');
       const result = await response.json();
-      
+
       if (result.success) {
         setTeacherName(result.teacher.name);
       } else {
@@ -65,17 +66,30 @@ export default function TeacherStudentsPage() {
 
   const fetchStudents = async (className: string) => {
     try {
+      setIsLoading(true);
+      setError('');
+
       const response = await fetch(`/api/teacher/students/${encodeURIComponent(className)}`);
       const result = await response.json();
-      
-      if (result.success) {
-        setStudents(result.students);
-      } else {
-        setError('Failed to fetch students');
+
+      if (!response.ok || !result.success) {
+        if (response.status === 403) {
+          setError(result.message || 'Access Denied: You do not have permission to view this class.');
+        } else if (response.status === 401) {
+          setError('Your session has expired. Please log in again.');
+          router.push('/teacher/login');
+        } else {
+          setError(result.message || 'Failed to fetch students');
+        }
+        setStudents([]);
+        return;
       }
+
+      setStudents(result.students);
     } catch (error) {
       console.error('Error fetching students:', error);
       setError('Failed to fetch students');
+      setStudents([]);
     } finally {
       setIsLoading(false);
     }
@@ -164,8 +178,12 @@ export default function TeacherStudentsPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
+          <div className="mb-6">
+            <NotificationBanner
+              variant={error.startsWith('Access Denied') ? 'warning' : 'error'}
+              title={error.startsWith('Access Denied') ? 'Access Denied' : 'Error'}
+              message={error}
+            />
           </div>
         )}
 

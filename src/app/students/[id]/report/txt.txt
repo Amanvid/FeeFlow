@@ -13,3 +13,21 @@ Creche	Nursery 1 & 2	KG 1 & 2	BS 1 to 6
 S1:V3
 
 fix the Download Btn to Download the report card section
+
+
+
+let this "Student
+
+Manuella Adomako Nyamekye
+
+Class
+
+BS 3
+
+Subjects
+
+0
+
+SubjectTermAcademic YearAssessmentsAverage %Final GradeTeacher"section
+
+show the class " class-ranking-modal.tsx " open the rankings and show the rankings of the top total score24 
