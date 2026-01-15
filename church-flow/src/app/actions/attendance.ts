@@ -49,7 +49,7 @@ export async function updateAttendance(prevState: any, formData: FormData) {
       const rowNum = rowIndex + 1;
       const eventIdRaw = formData.get("eventId") as string;
       const eventId = eventIdRaw === "none" ? "" : eventIdRaw;
-      await googleSheetsService.updateSheet(`attendance!B${rowNum}:E${rowNum}`, [[memberId, eventId || "", date, status || "present"]]);
+      await googleSheetsService.updateSheet(`attendance`, `B${rowNum}:E${rowNum}`, [[memberId, eventId || "", date, status || "present"]]);
       revalidatePath("/dashboard/attendance");
       return { message: "Attendance updated", success: true };
     } else {
