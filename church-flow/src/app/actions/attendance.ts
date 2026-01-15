@@ -41,8 +41,9 @@ export async function updateAttendance(prevState: any, formData: FormData) {
       return { message: "Missing attendance ID", success: false };
     }
 
-    const data = await googleSheetsService.getSheetData("attendance!A:A");
-    const rowIndex = data?.findIndex((row) => row[0] === id);
+    const result = await googleSheetsService.getSheetData("attendance!A:A");
+    const data = result.success ? result.data : [];
+    const rowIndex = data?.findIndex((row: any) => row[0] === id);
 
     if (rowIndex !== undefined && rowIndex !== -1) {
       const rowNum = rowIndex + 1;
