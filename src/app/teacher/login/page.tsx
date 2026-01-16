@@ -77,6 +77,18 @@ export default function TeacherLoginPage() {
           description: 'Please complete OTP verification to continue.',
         });
         setUsernameForOtp(values.username);
+        // Prefill phone from Teachers sheet contact (G column)
+        try {
+          const contactRes = await fetch('/api/auth/teacher-contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: values.username }),
+          });
+          const contactData = await contactRes.json();
+          if (contactRes.ok && contactData.success && contactData.contact) {
+            otpForm.setValue('phone', contactData.contact.replace(/[^0-9]/g, '').slice(-10));
+          }
+        } catch {}
         setStep('otp');
       } else {
         throw new Error(data.message || 'Invalid credentials.');
@@ -234,7 +246,7 @@ export default function TeacherLoginPage() {
                                                 <FormItem>
                                                 <FormLabel>Your Phone Number</FormLabel>
                                                 <FormControl>
-                                                    <Input type="tel" placeholder="024XXXXXXX" {...field} />
+                                    <Input type="tel" placeholder="024XXXXXXX" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                                 </FormItem>

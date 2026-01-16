@@ -47,22 +47,27 @@ export async function GET(
         )
       }
 
-      const requestedClass = decodedClassName.trim().toLowerCase()
-      const teacherClasses = (teacher.class || '')
-        .split(',')
-        .map(c => c.trim().toLowerCase())
-        .filter(c => c.length > 0)
+      // Check if teacher has admin privileges - if yes, skip class assignment check
+      const hasAdminPrivileges = session.adminPrivileges === 'Yes' || teacher.adminPrivileges === 'Yes'
+      
+      if (!hasAdminPrivileges) {
+        const requestedClass = decodedClassName.trim().toLowerCase()
+        const teacherClasses = (teacher.class || '')
+          .split(',')
+          .map(c => c.trim().toLowerCase())
+          .filter(c => c.length > 0)
 
-      const hasAccess = teacherClasses.includes(requestedClass)
+        const hasAccess = teacherClasses.includes(requestedClass)
 
-      if (!hasAccess) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Access Denied: You do not have permission to view this class.'
-          },
-          { status: 403 }
-        )
+        if (!hasAccess) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: 'Access Denied: You do not have permission to view this class.'
+            },
+            { status: 403 }
+          )
+        }
       }
     }
 

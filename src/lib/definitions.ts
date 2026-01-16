@@ -43,6 +43,7 @@ export interface TeacherUserWithPassword {
   location?: string;
   employmentDate?: string;
   dateStopped?: string;
+  adminPrivileges?: 'Yes' | 'No';
 }
 
 export interface AdminUserWithPassword {
@@ -134,6 +135,7 @@ export interface TeacherUser {
   subjects?: string[];
   employmentDate?: string;
   dateStopped?: string;
+  adminPrivileges?: 'Yes' | 'No';
 }
 
 export interface NonTeacherUser {

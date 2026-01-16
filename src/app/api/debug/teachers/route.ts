@@ -6,7 +6,7 @@ export async function GET() {
     const service = googleSheetsService;
     const spreadsheetId = process.env.NEXT_PUBLIC_SPREADSHEET_ID;
     
-    const result = await service.getSheetData('Teachers', 'A:H');
+    const result = await service.getSheetData('Teachers', 'A:K');
     
     if (!result.success) {
       return NextResponse.json({ 
@@ -25,6 +25,7 @@ export async function GET() {
       password: row[5] || '',
       subject: row[6] || '',
       classes: row[7] || '',
+      adminPrivileges: row[9] || 'No',
     }));
     
     return NextResponse.json({ teachers });

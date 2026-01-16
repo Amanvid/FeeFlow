@@ -21,6 +21,7 @@ interface TeacherProfile {
   joinedDate: string;
   subjects: string[];
   status: 'active' | 'inactive';
+  adminPrivileges?: 'Yes' | 'No';
 }
 
 export default function TeacherProfilePage() {
@@ -57,7 +58,8 @@ export default function TeacherProfilePage() {
           phone: '+233 24 XXX XXXX',
           joinedDate: new Date().toISOString().split('T')[0],
           subjects: ['Mathematics', 'Science', 'English'],
-          status: 'active'
+          status: 'active',
+          adminPrivileges: result.teacher.adminPrivileges || 'No'
         };
         setProfile(enhancedProfile);
       } else {
@@ -176,6 +178,16 @@ export default function TeacherProfilePage() {
               <div>
                 <label className="text-sm font-medium text-gray-700">Assigned Class</label>
                 <p className="text-gray-900">{profile.class || 'Not assigned'}</p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Admin Privileges</label>
+                <Badge 
+                  variant={profile.adminPrivileges === 'Yes' ? 'default' : 'secondary'}
+                  className={profile.adminPrivileges === 'Yes' ? 'bg-blue-600' : ''}
+                >
+                  {profile.adminPrivileges || 'No'}
+                </Badge>
               </div>
 
               <div>

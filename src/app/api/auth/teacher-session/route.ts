@@ -8,8 +8,8 @@ export async function GET() {
     
     console.log('Session verification result:', session);
     
-    if (!session || session.userType !== 'teacher') {
-      console.log('Session invalid or not a teacher:', session?.userType);
+    if (!session || (session.userType !== 'teacher' && session.userType !== 'admin')) {
+      console.log('Session invalid or not teacher/admin:', session?.userType);
       return NextResponse.json(
         { success: false, message: 'Unauthorized' },
         { status: 401 }
@@ -20,9 +20,10 @@ export async function GET() {
       success: true,
       teacher: {
         username: session.username,
-        name: session.name,
-        class: session.class,
-        role: session.role
+        name: session.name || session.username,
+        class: session.class || '',
+        role: session.role,
+        adminPrivileges: session.adminPrivileges || (session.userType === 'admin' ? 'Yes' : 'No')
       }
     });
   } catch (error) {

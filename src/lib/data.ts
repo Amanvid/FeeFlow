@@ -816,7 +816,8 @@ export async function getTeacherUsers(): Promise<TeacherUser[]> {
                 obj['Contact'] = (row[6] || '').toString().trim();
                 obj['Location'] = (row[7] || '').toString().trim(); // "Locationed" column maps to "Location"
                 obj['Employment Date'] = (row[8] || '').toString().trim();
-                obj['Date Stopped'] = (row[9] || '').toString().trim();
+                obj['Admin Privileges'] = (row[9] || '').toString().trim();
+                obj['Date Stopped'] = (row[10] || '').toString().trim();
                 
                 teacherData.push(obj);
             }
@@ -830,6 +831,7 @@ export async function getTeacherUsers(): Promise<TeacherUser[]> {
                 role: t['Role'] || '',
                 status: ((t['Status'] || '').toLowerCase() === 'active' ? 'active' : 'inactive') as 'active' | 'inactive',
                 username: t['Username'] || '',
+                adminPrivileges: (t['Admin Privileges'] || 'No') as 'Yes' | 'No',
                 email: '',
                 phone: '',
                 contact: t['Contact'] || '',
@@ -883,7 +885,8 @@ export async function getTeacherLoginUsers(): Promise<TeacherUserWithPassword[]>
                     role: (row[2] || '').toString().trim(),
                     name: (row[0] || '').toString().trim(),
                     class: (row[1] || '').toString().trim(),
-                    status: ((row[3] || '').toString().trim().toLowerCase() === 'active') ? 'active' : 'inactive'
+                    status: ((row[3] || '').toString().trim().toLowerCase() === 'active') ? 'active' : 'inactive',
+                    adminPrivileges: (row[9] || '').toString().trim() || 'No'
                 });
             }
             return out;

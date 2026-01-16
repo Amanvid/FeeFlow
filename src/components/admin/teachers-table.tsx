@@ -192,6 +192,7 @@ export default function TeachersTable({ teachers }: { teachers: TeacherUser[] })
                 <TableHead>Class</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Admin Privileges</TableHead>
                 <TableHead>Contact Info</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -224,6 +225,14 @@ export default function TeachersTable({ teachers }: { teachers: TeacherUser[] })
                       className={teacher.status === 'active' ? 'bg-green-600' : ''}
                     >
                       {teacher.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={teacher.adminPrivileges === 'Yes' ? 'default' : 'secondary'}
+                      className={teacher.adminPrivileges === 'Yes' ? 'bg-blue-600' : ''}
+                    >
+                      {teacher.adminPrivileges || 'No'}
                     </Badge>
                   </TableCell>
                   <TableCell>

@@ -4,7 +4,7 @@ import { GoogleSheetsService } from '@/lib/google-sheets';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, role, status, username, password, contact, location, employmentDate, dateStopped } = body;
+    const { name, role, status, username, password, contact, location, employmentDate, dateStopped, adminPrivileges } = body;
     const teacherClass = body.class;
 
     if (!name || !teacherClass || !role || !status || !username || !password) {
@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
       contact || '',
       location || '',
       employmentDate || '',
-      dateStopped || ''
+      dateStopped || '',
+      adminPrivileges || 'No'
     ];
 
     // Append the new teacher to the sheet
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { rowIndex, name, role, status, username, password, contact, location, employmentDate, dateStopped } = body;
+    const { rowIndex, name, role, status, username, password, contact, location, employmentDate, dateStopped, adminPrivileges } = body;
     const teacherClass = body.class;
 
     if (!username) {
@@ -93,6 +94,7 @@ export async function PUT(request: NextRequest) {
     if (location !== undefined) updates.location = location;
     if (employmentDate !== undefined) updates.employmentDate = employmentDate;
     if (dateStopped !== undefined) updates.dateStopped = dateStopped;
+    if (adminPrivileges !== undefined) updates.adminPrivileges = adminPrivileges;
 
     // Use the new targeted update method that finds by username and only updates specified fields
     const updateResult = await googleSheetsService.updateStaffByUsername('Teachers', username, updates);

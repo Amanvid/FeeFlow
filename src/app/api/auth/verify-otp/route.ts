@@ -61,7 +61,11 @@ export async function POST(req: Request) {
         userType: userType,
         ...(userType === 'teacher' && { 
             name: (user as TeacherUser).name,
-            class: (user as TeacherUser).class 
+            class: (user as TeacherUser).class,
+            adminPrivileges: (user as TeacherUser).adminPrivileges || 'No'
+        }),
+        ...(userType === 'admin' && {
+            adminPrivileges: 'Yes'
         })
     });
 

@@ -40,7 +40,8 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
     location: '',
     employmentDate: '',
     dateStopped: '',
-    department: ''
+    department: '',
+    adminPrivileges: 'No'
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -58,7 +59,8 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
         location: staff.location || '',
         employmentDate: 'employmentDate' in staff ? staff.employmentDate || '' : '',
         dateStopped: 'dateStopped' in staff ? staff.dateStopped || '' : '',
-        department: 'department' in staff ? staff.department : ''
+        department: 'department' in staff ? staff.department : '',
+        adminPrivileges: 'adminPrivileges' in staff ? staff.adminPrivileges || 'No' : 'No'
       });
     } else {
       setFormData({
@@ -72,7 +74,8 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
         location: '',
         employmentDate: '',
         dateStopped: '',
-        department: ''
+        department: '',
+        adminPrivileges: 'No'
       });
     }
     setError('');
@@ -194,6 +197,19 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
                 <SelectContent>
                   <SelectItem value="Active">Active</SelectItem>
                   <SelectItem value="Inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="adminPrivileges">Admin Privileges</Label>
+              <Select value={formData.adminPrivileges} onValueChange={(value) => handleInputChange('adminPrivileges', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="No">No</SelectItem>
+                  <SelectItem value="Yes">Yes</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { encrypt } from '@/lib/session';
 import { cookies } from 'next/headers';
-import { getTeacherLoginUsers } from '@/lib/data';
+import { getTeacherLoginUsers, getAdminUsers } from '@/lib/data';
 import type { TeacherUserWithPassword } from '@/lib/definitions';
-import type { TeacherUser } from '@/lib/definitions';
+import type { TeacherUser, AdminUserWithPassword } from '@/lib/definitions';
 
 export async function POST(req: Request) {
   try {
@@ -28,7 +28,8 @@ export async function POST(req: Request) {
         name: teacher.name,
         class: teacher.class,
         role: teacher.role,
-        userType: 'teacher'
+        userType: 'teacher',
+        adminPrivileges: teacher.adminPrivileges || 'No'
       });
 
       // Set session cookie
@@ -46,15 +47,44 @@ export async function POST(req: Request) {
         teacher: {
           name: teacher.name,
           class: teacher.class,
-          role: teacher.role
+          role: teacher.role,
+          adminPrivileges: teacher.adminPrivileges || 'No'
         }
       });
-    } else {
-      return NextResponse.json(
-        { success: false, message: 'Invalid username or password' },
-        { status: 401 }
-      );
     }
+    
+    // If not a teacher, allow SuperAdmin/Director to login via teacher portal
+    const adminUsers = await getAdminUsers();
+    const admin = adminUsers.find(
+      (u: AdminUserWithPassword) => u.username === username && u.password === password
+    );
+    
+    if (admin && (admin.role === 'SuperAdmin' || admin.role === 'Director')) {
+      const session = await encrypt({
+        username: admin.username,
+        name: admin.username,
+        class: '',
+        role: admin.role,
+        userType: 'admin',
+        adminPrivileges: 'Yes'
+      });
+      
+      const cookieStore = await cookies();
+      cookieStore.set('session', session, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24,
+        path: '/'
+      });
+      
+      return NextResponse.json({ success: true });
+    }
+    
+    return NextResponse.json(
+      { success: false, message: 'Invalid username or password' },
+      { status: 401 }
+    );
   } catch (error) {
     console.error('Teacher login API error:', error);
     return NextResponse.json(
