@@ -203,7 +203,7 @@ export default async function StudentReportPage({
     return ''
   })()
   const configuredMax =
-    (grp && sbaConfig?.totalScoreByGroup && sbaConfig.totalScoreByGroup[grp]) ? sbaConfig.totalScoreByGroup[grp] : 0
+    (grp && sbaConfig?.feesByGroup && sbaConfig.feesByGroup[grp]) ? sbaConfig.feesByGroup[grp] : 0
   const subjectsCount = subjectsList.length > 0 ? subjectsList.length : (rankingRecords[0]?.subjectCount || 1)
   const inferredMax = subjectsCount > 0 ? subjectsCount * 100 : 100
   const totalMaxFromConfig = configuredMax > 0 ? configuredMax : inferredMax

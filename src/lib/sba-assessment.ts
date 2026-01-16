@@ -99,19 +99,23 @@ export async function getSBAAssessmentData(studentId: string, className: string,
       return {
         id,
         studentName: data.studentName,
-        individualTest: individualTestAvg,
-        classTest: classTestAvg,
+        individualTestScore: individualTestAvg,
+        classTestScore: classTestAvg,
         totalClassScore,
-        scaledTo30,
-        endOfTermExam: endOfTermExamAvg,
-        scaledTo70,
+        scaledClassScore: scaledTo30,
+        examScore: endOfTermExamAvg,
+        scaledExamScore: scaledTo70,
         overallTotal,
         position: 0 // Will be calculated after sorting
       };
     });
 
     // Sort by overall total and assign positions
-    assessmentRecords.sort((a, b) => b.overallTotal - a.overallTotal);
+    assessmentRecords.sort((a, b) => {
+      const aTotal = typeof a.overallTotal === 'string' ? parseFloat(a.overallTotal) : a.overallTotal;
+      const bTotal = typeof b.overallTotal === 'string' ? parseFloat(b.overallTotal) : b.overallTotal;
+      return bTotal - aTotal;
+    });
     assessmentRecords.forEach((record, index) => {
       record.position = index + 1;
     });
@@ -150,7 +154,7 @@ export async function getAvailableSubjectsForClass(className: string, term: stri
     
     if (classData && classData.records.length > 0) {
       // Get unique subjects from the records
-      const subjects = [...new Set(classData.records.map(record => record.subject))].filter(s => s);
+      const subjects = [...new Set(classData.records.map(record => record.subject))].filter((s): s is string => s !== undefined && s !== null && s !== '');
       if (subjects.length > 0) {
         return subjects.sort();
       }
