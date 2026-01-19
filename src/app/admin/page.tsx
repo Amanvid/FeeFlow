@@ -19,8 +19,9 @@ export default async function AdminDashboard() {
 
   // Corrected: Calculate total outstanding balance from the students data source of truth.
   const totalBalanceDue = students.reduce((acc, student) => acc + student.balance, 0);
-  
-  const totalFeesPaid = students.reduce((acc, student) => acc + student.schoolFeesPaid, 0);
+
+  const UNIFORM_COST = 300;
+
   const totalBooksPaid = students.reduce((acc, student) => acc + student.booksFeePaid, 0);
   const totalPaidOverall = students.reduce((acc, student) => acc + student.amountPaid, 0);
 
@@ -47,25 +48,34 @@ export default async function AdminDashboard() {
     .filter(s => s.studentType === 'Old')
     .reduce((acc, student) => acc + student.booksFeePaid, 0);
 
-  // Calculate admission fees collected excluding books and uniforms (GH₵300 per uniform)
-  // Using the same logic as the admissions page
-  const UNIFORM_COST = 300;
-  
   // Get new students only
   const newStudents = students.filter(student => student.studentType === 'New');
-  
+
   // Calculate books fees for new students (based on existing class book prices)
   const admittedStudentBooksFees = newStudents.reduce((sum, student) => {
     const classBookPrice = booksPriceByClass[student.class] || 0;
     return sum + classBookPrice;
   }, 0);
-  
+
   const admittedStudentUniformsFees = newStudents.length * UNIFORM_COST;
-  
+
   // Admission fees excluding books and uniforms (same logic as admissions page)
   // fees paid - uniform - sum of class book price per each student
   const admissionFeesExcludingBooksAndUniforms = newStudents
     .reduce((sum, student) => sum + student.amountPaid, 0) - admittedStudentUniformsFees - admittedStudentBooksFees;
+
+  // Total School Fees Collected (excluding books AND uniforms)
+  // For old students: just schoolFeesPaid (already excludes books)
+  // For new students: schoolFeesPaid minus uniform cost (GH₵300)
+  const totalFeesPaid = students.reduce((acc, student) => {
+    if (student.studentType === 'New') {
+      // New students: exclude uniform cost from their school fees paid
+      return acc + (student.schoolFeesPaid - UNIFORM_COST);
+    } else {
+      // Old students: schoolFeesPaid already excludes books
+      return acc + student.schoolFeesPaid;
+    }
+  }, 0);
 
   // Calculate total uniform fees collected (GH₵300 per new student)
   const totalUniformFees = students
@@ -140,71 +150,97 @@ export default async function AdminDashboard() {
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
         {/* Financial Overview */}
-        <StatCard 
-          title="Total Collected (Overall)" 
+        <StatCard
+          title="Total Collected (Overall)"
           value={`GH₵${totalPaidOverall.toLocaleString()}`}
           description="Sum of all Old and New Student School fees and book payments."
           className="bg-green-600"
         />
-         <StatCard 
-          title="Total School Fees Collected" 
+        <StatCard
+          title="Total School Fees Collected"
           value={`GH₵${totalFeesPaid.toLocaleString()}`}
-          description="Sum of all Old and New Student School fee payments (excluding books)."
+          description="Sum of all Old and New Student School fee payments (excluding books & uniforms)."
           className="bg-sky-600"
         />
-        <StatCard 
-          title="Admission - Students Books" 
-          value={`GH₵${admissionStudentsBooks.toLocaleString()}`}
-          description={`${newAdmissions} New Students (books included in admission)`}
-          className="bg-cyan-600"
-        />
-        <StatCard 
-          title="Old student Books fees" 
-          value={`GH₵${oldStudentsBooks.toLocaleString()}`}
-          description="Sum of all books fee payments from Old Students."
-          className="bg-teal-600"
-        />
-        
-        {/* Admission Fees Excluding Books & Uniforms */}
-        <StatCard 
-          title="Admission Fees (Excl. Books & Uniforms)" 
-          value={`GH₵${admissionFeesExcludingBooksAndUniforms.toLocaleString()}`}
-          description={`${newAdmissions} New Students - Admission fees only (excludes books & GH₵300 uniform per Student)`}
-          className="bg-purple-600"
-        />
-        
-        {/* Uniform Fees */}
-        <StatCard 
-          title="New Students Uniform Fees Collected" 
-          value={`GH₵${totalUniformFees.toLocaleString()}`}
-          description={`${newAdmissions} New Students × GH₵300 per uniform`}
-          className="bg-orange-600"
-        />
-        
-        {/* New Admissions Statistics Card - REMOVED */}
-        
-        {/* New Students Gender Breakdown - REMOVED */}
-        
-        {/* New Students Fees Collection - REMOVED */}
-        
-        <StatCard 
-          title="Total Outstanding" 
+        <StatCard
+          title="Total Outstanding"
           value={`GH₵${totalBalanceDue.toLocaleString()}`}
           description="Sum of all outstanding balances."
           className="bg-red-500"
         />
-        
+
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-4">
+        {/* Admission Fees Excluding Books & Uniforms */}
+        <StatCard
+          title="Admission - Students Books"
+          value={`GH₵${admissionStudentsBooks.toLocaleString()}`}
+          description={`${newAdmissions} New Students (books included in admission)`}
+          className="bg-cyan-600"
+        />
+        <StatCard
+          title="Old student Books fees"
+          value={`GH₵${oldStudentsBooks.toLocaleString()}`}
+          description="Sum of all books fee payments from Old Students."
+          className="bg-teal-600"
+        />
+        <StatCard
+          title="Admission Fees (Excl. Books & Uniforms)"
+          value={`GH₵${admissionFeesExcludingBooksAndUniforms.toLocaleString()}`}
+          description={`${newAdmissions} New Students - Admission fees only (excludes books & GH₵300 uniform per Student)`}
+          className="bg-purple-600"
+        />
+
+        {/* Uniform Fees */}
+        <StatCard
+          title="New Students Uniform Fees Collected"
+          value={`GH₵${totalUniformFees.toLocaleString()}`}
+          description={`${newAdmissions} New Students × GH₵300 per uniform`}
+          className="bg-orange-600"
+        />
+
+        {/* New Admissions Statistics Card - REMOVED */}
+
+        {/* New Students Gender Breakdown - REMOVED */}
+
+        {/* New Students Fees Collection - REMOVED */}
+
+
         {/* Student Payment Status - REMOVED PAYMENT STATUS CARDS */}
 
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-4">
         {/* Student Demographics */}
-        <StatCard 
-          title="Total Students" 
-          value={totalStudents} 
+        <StatCard
+          title="Total Students"
+          value={totalStudents}
           description="Total number of students enrolled."
           className="bg-slate-700"
         />
+        <StatCard
+          title="New Admissions"
+          value={newAdmissions}
+          description="Total New Students admitted this term."
+          className="bg-fuchsia-500"
+        />
+        <StatCard
+          title="Old Students"
+          value={oldStudents}
+          description="Total number of continuing students."
+          className="bg-lime-600"
+        />
+
+        {/* Staff Statistics */}
+        <StatCard
+          title="Total Staff"
+          value={totalStaff}
+          description="All teaching and non-teaching staff."
+          className="bg-amber-600"
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 mt-4">
         <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Student Gender Distribution</CardTitle>
@@ -214,26 +250,6 @@ export default async function AdminDashboard() {
             <GenderPieChart maleCount={maleStudents} femaleCount={femaleStudents} />
           </CardContent>
         </Card>
-        <StatCard 
-          title="New Admissions" 
-          value={newAdmissions} 
-          description="Total New Students admitted this term."
-          className="bg-fuchsia-500"
-        />
-        <StatCard 
-          title="Old Students" 
-          value={oldStudents} 
-          description="Total number of continuing students."
-          className="bg-lime-600"
-        />
-        
-        {/* Staff Statistics */}
-        <StatCard 
-          title="Total Staff" 
-          value={totalStaff} 
-          description="All teaching and non-teaching staff."
-          className="bg-amber-600"
-        />
         <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Staff Activity Status</CardTitle>
@@ -246,6 +262,7 @@ export default async function AdminDashboard() {
             />
           </CardContent>
         </Card>
+
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
         <Card className="lg:col-span-7">
