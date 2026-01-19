@@ -41,7 +41,10 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
     employmentDate: '',
     dateStopped: '',
     department: '',
-    adminPrivileges: 'No'
+    adminPrivileges: 'No',
+    dateOfBirth: '',
+    qualification: '',
+    yearsOfService: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -57,10 +60,13 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
         class: 'class' in staff ? staff.class : '',
         contact: staff.contact || '',
         location: staff.location || '',
-        employmentDate: 'employmentDate' in staff ? staff.employmentDate || '' : '',
-        dateStopped: 'dateStopped' in staff ? staff.dateStopped || '' : '',
+        employmentDate: staff.employmentDate || '',
+        dateStopped: staff.dateStopped || '',
         department: 'department' in staff ? staff.department : '',
-        adminPrivileges: 'adminPrivileges' in staff ? staff.adminPrivileges || 'No' : 'No'
+        adminPrivileges: 'adminPrivileges' in staff ? staff.adminPrivileges || 'No' : 'No',
+        dateOfBirth: staff.dateOfBirth || '',
+        qualification: staff.qualification || '',
+        yearsOfService: staff.yearsOfService || ''
       });
     } else {
       setFormData({
@@ -75,7 +81,10 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
         employmentDate: '',
         dateStopped: '',
         department: '',
-        adminPrivileges: 'No'
+        adminPrivileges: 'No',
+        dateOfBirth: '',
+        qualification: '',
+        yearsOfService: ''
       });
     }
     setError('');
@@ -84,9 +93,9 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     // Validation
-    if (!formData.name || !formData.username || (!staff && !formData.password)) {
+    if (!formData.name || !formData.username || !formData.role || (!staff && !formData.password)) {
       setError('Please fill in all required fields');
       return;
     }
@@ -102,13 +111,13 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
     }
 
     setIsLoading(true);
-    
+
     try {
       const submitData: any = { ...formData };
       if (staff && !formData.password) {
         delete submitData.password; // Don't send empty password on update
       }
-      
+
       await onSave(submitData);
       onClose();
     } catch (err) {
@@ -130,7 +139,7 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
             {staff ? `Edit ${type === 'teacher' ? 'Teacher' : 'Non-Teaching Staff'}` : `Add ${type === 'teacher' ? 'Teacher' : 'Non-Teaching Staff'}`}
           </DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm">
@@ -179,13 +188,22 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="role">Role *</Label>
-              <Input
-                id="role"
-                value={formData.role}
-                onChange={(e) => handleInputChange('role', e.target.value)}
-                placeholder="Enter role"
-                required
-              />
+              <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Class Teacher">Class Teacher</SelectItem>
+                  <SelectItem value="Subject Teacher">Subject Teacher</SelectItem>
+                  <SelectItem value="Assistant Head">Assistant Head</SelectItem>
+                  <SelectItem value="Head Teacher">Head Teacher</SelectItem>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="Security">Security</SelectItem>
+                  <SelectItem value="Cleaner">Cleaner</SelectItem>
+                  <SelectItem value="Cook">Cook</SelectItem>
+                  <SelectItem value="Driver">Driver</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -218,13 +236,27 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
           {type === 'teacher' ? (
             <div className="space-y-2">
               <Label htmlFor="class">Class *</Label>
-              <Input
-                id="class"
-                value={formData.class}
-                onChange={(e) => handleInputChange('class', e.target.value)}
-                placeholder="Enter class (e.g., Class 1, Class 2)"
-                required
-              />
+              <Select value={formData.class} onValueChange={(value) => handleInputChange('class', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select class" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  <SelectItem value="Creche">Creche</SelectItem>
+                  <SelectItem value="Nursery 1">Nursery 1</SelectItem>
+                  <SelectItem value="Nursery 2">Nursery 2</SelectItem>
+                  <SelectItem value="KG 1">KG 1</SelectItem>
+                  <SelectItem value="KG 2">KG 2</SelectItem>
+                  <SelectItem value="BS 1">BS 1</SelectItem>
+                  <SelectItem value="BS 2">BS 2</SelectItem>
+                  <SelectItem value="BS 3">BS 3</SelectItem>
+                  <SelectItem value="BS 4">BS 4</SelectItem>
+                  <SelectItem value="BS 5">BS 5</SelectItem>
+                  <SelectItem value="BS 6">BS 6</SelectItem>
+                  <SelectItem value="JHS 1">JHS 1</SelectItem>
+                  <SelectItem value="JHS 2">JHS 2</SelectItem>
+                  <SelectItem value="JHS 3">JHS 3</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           ) : (
             <div className="space-y-2">
@@ -263,6 +295,28 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="qualification">Qualification</Label>
+              <Input
+                id="qualification"
+                value={formData.qualification}
+                onChange={(e) => handleInputChange('qualification', e.target.value)}
+                placeholder="e.g., B.Ed, Diploma"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label htmlFor="employmentDate">Employment Date</Label>
               <Input
                 id="employmentDate"
@@ -272,6 +326,19 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="yearsOfService">Years of Service (Auto-calculated)</Label>
+              <Input
+                id="yearsOfService"
+                value={formData.yearsOfService}
+                readOnly
+                disabled
+                className="bg-muted"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="dateStopped">Date Stopped</Label>
               <Input
@@ -306,6 +373,6 @@ export default function StaffModal({ isOpen, onClose, onSave, staff, type }: Sta
           </div>
         </form>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }

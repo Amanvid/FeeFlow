@@ -22,8 +22,12 @@ export async function POST(req: Request) {
     );
 
     if (user) {
-      // Credentials are correct. Signal success to the frontend to proceed to OTP step.
-      return NextResponse.json({ success: true });
+      // Credentials are correct. Return phone number for OTP step.
+      return NextResponse.json({
+        success: true,
+        phone: user.phone || '', // Return phone number for OTP
+        username: user.username // Return username for next step
+      });
     } else {
       return NextResponse.json(
         { success: false, message: 'Invalid username or password' },

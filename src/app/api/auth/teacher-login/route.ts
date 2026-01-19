@@ -29,7 +29,8 @@ export async function POST(req: Request) {
         class: teacher.class,
         role: teacher.role,
         userType: 'teacher',
-        adminPrivileges: teacher.adminPrivileges || 'No'
+        adminPrivileges: teacher.adminPrivileges || 'No',
+        contact: teacher.contact || '' // Include contact/phone number
       });
 
       // Set session cookie
@@ -42,23 +43,24 @@ export async function POST(req: Request) {
         path: '/'
       });
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: true,
         teacher: {
           name: teacher.name,
           class: teacher.class,
           role: teacher.role,
-          adminPrivileges: teacher.adminPrivileges || 'No'
+          adminPrivileges: teacher.adminPrivileges || 'No',
+          contact: teacher.contact || '' // Include contact in response
         }
       });
     }
-    
+
     // If not a teacher, allow SuperAdmin/Director to login via teacher portal
     const adminUsers = await getAdminUsers();
     const admin = adminUsers.find(
       (u: AdminUserWithPassword) => u.username === username && u.password === password
     );
-    
+
     if (admin && (admin.role === 'SuperAdmin' || admin.role === 'Director')) {
       const session = await encrypt({
         username: admin.username,
@@ -68,7 +70,7 @@ export async function POST(req: Request) {
         userType: 'admin',
         adminPrivileges: 'Yes'
       });
-      
+
       const cookieStore = await cookies();
       cookieStore.set('session', session, {
         httpOnly: true,
@@ -77,10 +79,13 @@ export async function POST(req: Request) {
         maxAge: 60 * 60 * 24,
         path: '/'
       });
-      
-      return NextResponse.json({ success: true });
+
+      return NextResponse.json({
+        success: true,
+        phone: admin.phone || ''
+      });
     }
-    
+
     return NextResponse.json(
       { success: false, message: 'Invalid username or password' },
       { status: 401 }

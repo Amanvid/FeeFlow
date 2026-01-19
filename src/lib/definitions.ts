@@ -50,6 +50,7 @@ export interface AdminUserWithPassword {
   username: string;
   password?: string;
   role: string;
+  phone?: string; // Add phone field
 }
 
 
@@ -133,7 +134,10 @@ export interface TeacherUser {
   contact?: string;
   location?: string;
   subjects?: string[];
+  dateOfBirth?: string;
+  qualification?: string;
   employmentDate?: string;
+  yearsOfService?: string;
   dateStopped?: string;
   adminPrivileges?: 'Yes' | 'No';
 }
@@ -149,6 +153,18 @@ export interface NonTeacherUser {
   status: 'active' | 'inactive';
   contact?: string;
   location?: string;
+  employmentDate?: string;
+  yearsOfService?: string;
+  dateOfBirth?: string;
+  qualification?: string;
   dateCreated?: string;
   dateUpdated?: string;
+  dateStopped?: string;
+}
+
+export interface ClassBookConfig {
+  className: string;
+  booksFee: number;
+  textBooksQty: number;
+  exerciseBooksQty: number;
 }

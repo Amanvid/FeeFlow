@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getAllStudents } from "@/lib/data";
+import { getAllStudents, getBooksConfig } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import BooksStatsCard from "@/components/admin/books/books-stats-card";
 import BooksPaymentStatusChart from "@/components/admin/books/books-payment-status-chart";
@@ -16,6 +16,7 @@ import StudentBooksTable from "@/components/admin/books/student-books-table";
 
 export default async function BooksDashboard() {
   const students = await getAllStudents();
+  const booksConfig = await getBooksConfig();
 
   // Class order for consistent display
   const classOrder = ["Creche", "Nursery 1", "Nursery 2", "KG 1", "KG 2", "BS 1", "BS 2", "BS 3", "BS 4", "BS 5", "BS 6"];
@@ -31,7 +32,7 @@ export default async function BooksDashboard() {
   // Books fee calculations
   const totalBooksPaid = students.reduce((acc, student) => acc + student.booksFeePaid, 0);
   const totalBooksBalance = students.reduce((acc, student) => acc + (student.books - student.booksFeePaid), 0);
-  
+
   // Calculate new students' book fees based on their class books price
   const newStudentsBookFees = students
     .filter(student => student.studentType === 'New')
@@ -41,22 +42,22 @@ export default async function BooksDashboard() {
       const classBookPrice = booksPriceByClass[student.class] || 0;
       return sum + classBookPrice;
     }, 0);
-  
+
   // Calculate total books fees (paid + outstanding + new students' calculated fees)
   const totalBooksFees = totalBooksPaid + totalBooksBalance + newStudentsBookFees;
-  
+
   // Calculate collection percentage (including new students' calculated fees as collected)
   const totalBooksCollected = totalBooksPaid + newStudentsBookFees;
   const collectionPercentage = totalBooksFees > 0 ? ((totalBooksCollected / totalBooksFees) * 100).toFixed(1) : '0.0';
-  
+
   // Payment status for books - New students are automatically Paid since books are included in admission fees
-  const fullyPaidBooks = students.filter(s => 
+  const fullyPaidBooks = students.filter(s =>
     s.studentType === 'New' || (s.books > 0 && s.booksFeePaid >= s.books)
   ).length;
-  const partiallyPaidBooks = students.filter(s => 
+  const partiallyPaidBooks = students.filter(s =>
     s.studentType !== 'New' && s.books > 0 && s.booksFeePaid > 0 && s.booksFeePaid < s.books
   ).length;
-  const owingBooks = students.filter(s => 
+  const owingBooks = students.filter(s =>
     s.studentType !== 'New' && s.books > 0 && s.booksFeePaid === 0
   ).length;
   // More accurate logic for "No Books Required" - students who truly have no book requirements
@@ -66,11 +67,11 @@ export default async function BooksDashboard() {
     // This indicates they genuinely don't require books, not just zero balance
     return s.books === 0 && s.booksFeePaid === 0 && s.studentType !== 'New';
   }).length;
-  
+
   // Calculate total students with books requirements
   const totalStudentsWithBooks = students.filter(s => s.books > 0).length;
   const fullyPaidPercentage = totalStudentsWithBooks > 0 ? ((fullyPaidBooks / totalStudentsWithBooks) * 100).toFixed(1) : '0.0';
-  
+
   // Calculate percentages for partial payments and owing students
   const partialPaymentPercentage = totalStudentsWithBooks > 0 ? ((partiallyPaidBooks / totalStudentsWithBooks) * 100).toFixed(1) : '0.0';
   const owingPercentage = totalStudentsWithBooks > 0 ? ((owingBooks / totalStudentsWithBooks) * 100).toFixed(1) : '0.0';
@@ -130,37 +131,37 @@ export default async function BooksDashboard() {
 
       {/* Main Statistics */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
-        <BooksStatsCard 
-          title="Total Books Fees Expected" 
+        <BooksStatsCard
+          title="Total Books Fees Expected"
           value={`GH₵${totalBooksFees.toLocaleString()}`}
           description="Across all students (both Old and New)"
           className="bg-purple-600"
         />
-        <BooksStatsCard 
-          title="Total Books Fees Collected" 
+        <BooksStatsCard
+          title="Total Books Fees Collected"
           value={`GH₵${totalBooksCollected.toLocaleString()}`}
           description={`${collectionPercentage}% collected`}
           className="bg-blue-600"
         />
-      
+
       </div>
 
       {/* Books Fees Breakdown */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">    
-        <BooksStatsCard 
-          title="Old Student Books Fees" 
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <BooksStatsCard
+          title="Old Student Books Fees"
           value={`GH₵${oldStudentsBooksFees.toLocaleString()}`}
           description="Books fees paid by old students"
           className="bg-teal-600"
         />
-        <BooksStatsCard 
-          title="Admission Students Books" 
+        <BooksStatsCard
+          title="Admission Students Books"
           value={`GH₵${admissionStudentsBooksTotal.toLocaleString()}`}
           description={`${admissionStudentsCount} new students (books included in admission)`}
           className="bg-indigo-600"
         />
-         <BooksStatsCard 
-          title="Total Books Fees Outstanding" 
+        <BooksStatsCard
+          title="Total Books Fees Outstanding"
           value={`GH₵${totalBooksBalance.toLocaleString()}`}
           description={`${fullyPaidBooks} paid, ${partiallyPaidBooks} partial, ${owingBooks} owing`}
           className="bg-red-500"
@@ -169,26 +170,26 @@ export default async function BooksDashboard() {
 
       {/* Payment Status Details */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-         <BooksStatsCard 
-          title="Fully Paid (Books)" 
+        <BooksStatsCard
+          title="Fully Paid (Books)"
           value={fullyPaidBooks}
           description={`${fullyPaidPercentage}% of total`}
           className="bg-green-600"
         />
-        <BooksStatsCard 
-          title="Partial Payments" 
+        <BooksStatsCard
+          title="Partial Payments"
           value={partiallyPaidBooks}
           description={`${partialPaymentPercentage}% of total`}
           className="bg-yellow-600"
         />
-        <BooksStatsCard 
-          title="Owing Students" 
+        <BooksStatsCard
+          title="Owing Students"
           value={owingBooks}
           description={`${owingPercentage}% of total`}
           className="bg-orange-600"
         />
-        <BooksStatsCard 
-          title="No Books Required" 
+        <BooksStatsCard
+          title="No Books Required"
           value={noBooksRequired}
           description="Students without book requirements"
           className="bg-gray-600"
@@ -203,7 +204,7 @@ export default async function BooksDashboard() {
             <CardDescription>Distribution of book fee payment status</CardDescription>
           </CardHeader>
           <CardContent>
-            <BooksPaymentStatusChart 
+            <BooksPaymentStatusChart
               fullyPaid={fullyPaidBooks}
               partiallyPaid={partiallyPaidBooks}
               owing={owingBooks}
@@ -211,18 +212,16 @@ export default async function BooksDashboard() {
             />
           </CardContent>
         </Card>
-      
-      {/* Class Books Price Table */}
-         <Card>
+
+        {/* Class Books Price Table */}
+        <Card>
           <CardHeader>
             <CardTitle>Class Books Price Overview</CardTitle>
             <CardDescription>Book fees by class</CardDescription>
           </CardHeader>
           <CardContent>
-            <ClassBooksPriceTable 
-              booksPriceByClass={booksPriceByClass}
-              classOrder={classOrder}
-              studentsWithBooksByClass={studentsWithBooksByClass}
+            <ClassBooksPriceTable
+              booksConfig={booksConfig}
             />
           </CardContent>
         </Card>
@@ -230,7 +229,7 @@ export default async function BooksDashboard() {
 
       {/* Books Purchase Chart */}
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
-        <BooksPurchaseChart 
+        <BooksPurchaseChart
           booksPurchasedByClass={booksPurchasedByClass}
           totalBooksPurchased={totalBooksPurchased}
           title="Books Purchase by Class"
@@ -241,7 +240,7 @@ export default async function BooksDashboard() {
         />
       </div>
 
-   
+
 
       {/* Student Books Payment Details */}
       <div className="grid gap-4">

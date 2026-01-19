@@ -4,10 +4,11 @@ import { GoogleSheetsService } from '@/lib/google-sheets';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, role, status, username, password, contact, location, employmentDate, dateStopped, adminPrivileges } = body;
+    const { name, role, status, username, password, contact, location, employmentDate, dateStopped, adminPrivileges, dateOfBirth, qualification, yearsOfService } = body;
     const teacherClass = body.class;
 
     if (!name || !teacherClass || !role || !status || !username || !password) {
+      console.error('Missing required fields for teacher:', { name, teacherClass, role, status, username, password });
       return NextResponse.json(
         { success: false, message: 'Missing required fields' },
         { status: 400 }
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const googleSheetsService = new GoogleSheetsService();
-    
+
     // Get current teachers data to find the next row
     const result = await googleSheetsService.getSheetData('Teachers');
     if (!result.success) {
@@ -28,24 +29,42 @@ export async function POST(request: NextRequest) {
     const rows = result.data;
     const newRowIndex = rows.length; // Next available row
 
-    // Prepare the new teacher data
+    // Calculate Years of Service from Employment Date
+    let calculatedYearsOfService = '0';
+    if (employmentDate) {
+      const empDate = new Date(employmentDate);
+      if (!isNaN(empDate.getTime())) {
+        const today = new Date();
+        let years = today.getFullYear() - empDate.getFullYear();
+        const m = today.getMonth() - empDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < empDate.getDate())) {
+          years--;
+        }
+        calculatedYearsOfService = years.toString();
+      }
+    }
+
+    // Prepare the new teacher data (indices 0-13)
     const newTeacherData = [
-      name,
-      teacherClass,
-      role,
-      status,
-      username,
-      password,
-      contact || '',
-      location || '',
-      employmentDate || '',
-      dateStopped || '',
-      adminPrivileges || 'No'
+      name,                           // 0: Name
+      dateOfBirth || '',              // 1: Date of Birth
+      teacherClass,                   // 2: Class
+      role,                           // 3: Role
+      status,                         // 4: Status
+      username,                       // 5: Username
+      password,                       // 6: Password
+      adminPrivileges || 'No',        // 7: Admin Privileges
+      qualification || '',            // 8: Qualification
+      contact || '',                  // 9: Contact
+      location || '',                 // 10: Location
+      employmentDate || '',           // 11: Employment Date
+      calculatedYearsOfService,       // 12: Years of Service (auto-calculated)
+      dateStopped || ''               // 13: Date Stopped
     ];
 
     // Append the new teacher to the sheet
-    const appendResult = await googleSheetsService.appendToSheet('Teachers', newTeacherData);
-    
+    const appendResult = await googleSheetsService.appendToSheet('Teachers', [newTeacherData]);
+
     if (!appendResult.success) {
       return NextResponse.json(
         { success: false, message: appendResult.message },
@@ -71,7 +90,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { rowIndex, name, role, status, username, password, contact, location, employmentDate, dateStopped, adminPrivileges } = body;
+    const { rowIndex, name, role, status, username, password, contact, location, employmentDate, dateStopped, adminPrivileges, dateOfBirth, qualification, yearsOfService } = body;
     const teacherClass = body.class;
 
     if (!username) {
@@ -82,7 +101,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const googleSheetsService = new GoogleSheetsService();
-    
+
     // Prepare only the fields that need to be updated (undefined fields won't be changed)
     const updates: any = {};
     if (name !== undefined) updates.name = name;
@@ -95,10 +114,13 @@ export async function PUT(request: NextRequest) {
     if (employmentDate !== undefined) updates.employmentDate = employmentDate;
     if (dateStopped !== undefined) updates.dateStopped = dateStopped;
     if (adminPrivileges !== undefined) updates.adminPrivileges = adminPrivileges;
+    if (dateOfBirth !== undefined) updates.dateOfBirth = dateOfBirth;
+    if (qualification !== undefined) updates.qualification = qualification;
+    if (yearsOfService !== undefined) updates.yearsOfService = yearsOfService;
 
     // Use the new targeted update method that finds by username and only updates specified fields
     const updateResult = await googleSheetsService.updateStaffByUsername('Teachers', username, updates);
-    
+
     if (!updateResult.success) {
       return NextResponse.json(
         { success: false, message: updateResult.message },
@@ -109,10 +131,10 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Teacher updated successfully',
-      data: { 
-        username, 
+      data: {
+        username,
         updatedFields: Object.keys(updates),
-        rowIndex: updateResult.data?.rowIndex 
+        rowIndex: updateResult.data?.rowIndex
       }
     });
 
@@ -138,10 +160,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     const googleSheetsService = new GoogleSheetsService();
-    
+
     // Delete the specific row (rowIndex + 1 to account for header row)
     const deleteResult = await googleSheetsService.deleteRowFromSheet('Teachers', parseInt(rowIndex) + 1);
-    
+
     if (!deleteResult.success) {
       return NextResponse.json(
         { success: false, message: deleteResult.message },

@@ -11,7 +11,7 @@ export class GoogleSheetsService {
   private loadPrivateKey(): string {
     // Try to get from environment first
     let privateKey = process.env.GOOGLE_PRIVATE_KEY;
-    
+
     // If the key is too short or doesn't have proper headers, try to reconstruct it
     if (!privateKey || privateKey.length < 100 || !privateKey.includes('-----END PRIVATE KEY-----')) {
       try {
@@ -21,7 +21,7 @@ export class GoogleSheetsService {
           const lines = envContent.split('\n');
           let reconstructedKey = '';
           let inPrivateKey = false;
-          
+
           for (const line of lines) {
             if (line.startsWith('GOOGLE_PRIVATE_KEY=')) {
               reconstructedKey = line.replace('GOOGLE_PRIVATE_KEY=', '');
@@ -32,7 +32,7 @@ export class GoogleSheetsService {
               break;
             }
           }
-          
+
           if (reconstructedKey.includes('-----END PRIVATE KEY-----')) {
             privateKey = reconstructedKey;
           }
@@ -41,12 +41,12 @@ export class GoogleSheetsService {
         console.warn('Could not read .env.local file:', error);
       }
     }
-    
+
     // Format the key properly - handle both \n and actual newlines
     if (privateKey) {
       // Replace escaped newlines with actual newlines
       privateKey = privateKey.replace(/\\n/g, '\n');
-      
+
       // Ensure proper header/footer formatting
       if (privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
         privateKey = privateKey
@@ -55,12 +55,12 @@ export class GoogleSheetsService {
           .trim();
       }
     }
-    
+
     // Final validation
     if (!privateKey || !privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
       throw new Error('Invalid private key format. Please check your GOOGLE_PRIVATE_KEY environment variable.');
     }
-    
+
     return privateKey;
   }
 
@@ -77,7 +77,7 @@ export class GoogleSheetsService {
 
     const privateKey = this.loadPrivateKey();
     console.log("✅ Private key loaded successfully, length:", privateKey.length);
-    
+
     try {
       this.auth = new google.auth.JWT({
         email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -160,7 +160,7 @@ export class GoogleSheetsService {
         fields: 'sheets.properties.title',
       });
 
-      const sheetExists = existingSheets.data.sheets?.some((sheet: any) => 
+      const sheetExists = existingSheets.data.sheets?.some((sheet: any) =>
         sheet.properties?.title === sheetName
       );
 
@@ -248,7 +248,7 @@ export class GoogleSheetsService {
 
       const rows = getResult.data;
       const headerRow = rows[0];
-      
+
       // Find the row index (1-based for Sheets API)
       let rowIndex = -1;
       for (let i = 1; i < rows.length; i++) {
@@ -407,8 +407,8 @@ export class GoogleSheetsService {
    * This prevents creating new entries and only updates specified fields
    */
   async updateStaffByUsername(
-    sheetName: 'Teachers' | 'Non-Teachers', 
-    username: string, 
+    sheetName: 'Teachers' | 'Non-Teaching',
+    username: string,
     updates: Partial<{
       name: string;
       role: string;
@@ -420,6 +420,10 @@ export class GoogleSheetsService {
       employmentDate?: string;
       dateStopped?: string;
       password?: string;
+      adminPrivileges?: string;
+      dateOfBirth?: string;
+      qualification?: string;
+      yearsOfService?: string;
     }>
   ) {
     try {
@@ -433,11 +437,11 @@ export class GoogleSheetsService {
       }
 
       const rows = getResult.data;
-      
-      // Find the user by username (username is at index 4 in the Teachers sheet)
+
+      // Find the user by username (username is at index 5 in both sheets now)
       let userRowIndex = -1;
-      const usernameColumn = 4; // Username is column E (index 4)
-      
+      const usernameColumn = 5; // Username is column F (index 5)
+
       for (let i = 1; i < rows.length; i++) { // Start from 1 to skip header
         if (rows[i][usernameColumn] === username) {
           userRowIndex = i;
@@ -454,27 +458,45 @@ export class GoogleSheetsService {
 
       // Get current row data to preserve existing values
       const currentRow = rows[userRowIndex];
-      
+
       // Create updated row with only the specified changes
       const updatedRow = [...currentRow];
-      
+
       // Apply updates only to specified fields
-      if (updates.name !== undefined) updatedRow[0] = updates.name; // Name at index 0
-      if (sheetName === 'Teachers' && updates.class !== undefined) updatedRow[1] = updates.class; // Class at index 1 for teachers
-      if (updates.role !== undefined) updatedRow[2] = updates.role; // Role at index 2
-      if (updates.status !== undefined) updatedRow[3] = updates.status; // Status at index 3
-      if (updates.password !== undefined) updatedRow[5] = updates.password; // Password at index 5
-      if (updates.contact !== undefined) updatedRow[6] = updates.contact; // Contact at index 6
-      if (updates.location !== undefined) updatedRow[7] = updates.location; // Location at index 7
-      if (updates.employmentDate !== undefined) updatedRow[8] = updates.employmentDate; // Employment Date at index 8
-      if (updates.dateStopped !== undefined) updatedRow[9] = updates.dateStopped; // Date Stopped at index 9
-      
-      // For non-teachers, department replaces class at index 1
-      if (sheetName === 'Non-Teachers' && updates.department !== undefined) updatedRow[1] = updates.department;
+      // Common fields (indices may vary)
+      if (updates.name !== undefined) updatedRow[0] = updates.name; // Name
+
+      if (updates.dateOfBirth !== undefined) updatedRow[1] = updates.dateOfBirth; // Date of Birth (Both index 1)
+
+      if (sheetName === 'Teachers') {
+        if (updates.class !== undefined) updatedRow[2] = updates.class; // Class
+        if (updates.role !== undefined) updatedRow[3] = updates.role; // Role
+        if (updates.status !== undefined) updatedRow[4] = updates.status; // Status
+        if (updates.password !== undefined) updatedRow[6] = updates.password; // Password
+        if (updates.adminPrivileges !== undefined) updatedRow[7] = updates.adminPrivileges; // Admin Privileges
+        if (updates.qualification !== undefined) updatedRow[8] = updates.qualification; // Qualification
+        if (updates.contact !== undefined) updatedRow[9] = updates.contact; // Contact
+        if (updates.location !== undefined) updatedRow[10] = updates.location; // Location
+        if (updates.employmentDate !== undefined) updatedRow[11] = updates.employmentDate; // Employment Date
+        if (updates.yearsOfService !== undefined) updatedRow[12] = updates.yearsOfService; // Years of Service
+        if (updates.dateStopped !== undefined) updatedRow[13] = updates.dateStopped; // Date Stopped
+      } else {
+        // Non-Teaching
+        if (updates.department !== undefined) updatedRow[2] = updates.department; // Department
+        if (updates.role !== undefined) updatedRow[3] = updates.role; // Role
+        if (updates.status !== undefined) updatedRow[4] = updates.status; // Status
+        if (updates.password !== undefined) updatedRow[6] = updates.password; // Password
+        if (updates.qualification !== undefined) updatedRow[7] = updates.qualification; // Qualification
+        if (updates.contact !== undefined) updatedRow[8] = updates.contact; // Contact
+        if (updates.location !== undefined) updatedRow[9] = updates.location; // Location
+        if (updates.employmentDate !== undefined) updatedRow[10] = updates.employmentDate; // Employment Date
+        if (updates.yearsOfService !== undefined) updatedRow[11] = updates.yearsOfService; // Years of Service
+        if (updates.dateStopped !== undefined) updatedRow[12] = updates.dateStopped; // Date Stopped
+      }
 
       // Update only the specific row (userRowIndex + 1 because Sheets API is 1-indexed and we have headers)
       const updateResult = await this.updateRowInSheet(sheetName, userRowIndex + 1, updatedRow);
-      
+
       if (!updateResult.success) {
         return updateResult;
       }
@@ -556,7 +578,7 @@ export class GoogleSheetsService {
       if (shouldAddHeaders) {
         const headers = [
           'Invoice Number',
-          'Guardian Name', 
+          'Guardian Name',
           'Guardian Phone',
           'Relationship',
           'Student Name',
@@ -571,7 +593,7 @@ export class GoogleSheetsService {
 
         // First add the headers
         await this.appendToSheet('Claims', [headers]);
-        
+
         if (existingRowIndex >= 0) {
           // If we found an existing row but we're adding headers, we need to update the data
           // The existing row will now be at index + 2 (header row + 1-based indexing)
@@ -618,7 +640,7 @@ export class GoogleSheetsService {
       }
 
       const rows = claimsResult.data;
-      
+
       // Find the invoice row
       let rowIndex = -1;
       for (let i = 1; i < rows.length; i++) { // Start from 1 to skip header
@@ -944,7 +966,7 @@ export class GoogleSheetsService {
     try {
       // Get current config data
       const configResult = await this.getSheetData('Config');
-      
+
       if (!configResult.success || !configResult.data || configResult.data.length === 0) {
         // If Config sheet doesn't exist, create it with headers
         await this.createSheet('Config');
@@ -961,7 +983,7 @@ export class GoogleSheetsService {
           'Admission Notifications Enabled',
         ];
         await this.appendToSheet('Config', [headers]);
-        
+
         // Add the due date in the second row
         const valuesRow = [
           '',

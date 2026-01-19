@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldCheck } from 'lucide-react';
+import { Loader2, ShieldCheck, ArrowLeft, Home } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 
@@ -77,18 +77,11 @@ export default function TeacherLoginPage() {
           description: 'Please complete OTP verification to continue.',
         });
         setUsernameForOtp(values.username);
-        // Prefill phone from Teachers sheet contact (G column)
-        try {
-          const contactRes = await fetch('/api/auth/teacher-contact', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: values.username }),
-          });
-          const contactData = await contactRes.json();
-          if (contactRes.ok && contactData.success && contactData.contact) {
-            otpForm.setValue('phone', contactData.contact.replace(/[^0-9]/g, '').slice(-10));
-          }
-        } catch {}
+        // Prefill phone from response (works for both Teacher and Admin)
+        const contact = data.teacher?.contact || data.phone;
+        if (contact) {
+          otpForm.setValue('phone', contact.replace(/[^0-9]/g, '').slice(-10));
+        }
         setStep('otp');
       } else {
         throw new Error(data.message || 'Invalid credentials.');
@@ -112,7 +105,7 @@ export default function TeacherLoginPage() {
       toast({ variant: 'destructive', title: 'Invalid Phone', description: phoneValidation.error.errors[0].message });
       return;
     }
-    
+
     setIsLoading(true);
     try {
       const res = await fetch('/api/auth/send-otp', {
@@ -122,7 +115,7 @@ export default function TeacherLoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      
+
       toast({ title: 'OTP Sent', description: `An OTP has been sent to ${phone}.` });
       setIsOtpSent(true);
       setPhoneForOtp(phone);
@@ -143,9 +136,9 @@ export default function TeacherLoginPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.message);
-      
+
       toast({ title: 'Login Successful', description: 'Redirecting to dashboard...' });
-      
+
       // Add a small delay to ensure cookie is set properly
       setTimeout(() => {
         window.location.href = '/teacher/classes';
@@ -163,6 +156,22 @@ export default function TeacherLoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40 relative overflow-hidden">
+      {/* Navigation Buttons */}
+      <div className="absolute top-4 left-4 z-20">
+        <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+      </div>
+      <div className="absolute top-4 right-4 z-20">
+        <Link href="/">
+          <Button variant="ghost" size="sm" className="gap-2">
+            <Home className="h-4 w-4" />
+            Home
+          </Button>
+        </Link>
+      </div>
+
       {/* Large background logo */}
       <div className="absolute inset-0 flex items-center justify-center opacity-5 z-0">
         <Image
@@ -177,132 +186,132 @@ export default function TeacherLoginPage() {
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 z-0"></div>
       <Card className="w-full max-w-md relative z-10 bg-background/95 backdrop-blur-sm">
         <CardHeader className="text-center">
-            <div className="mx-auto bg-primary/10 text-primary p-3 rounded-full w-fit">
-                <ShieldCheck className="w-8 h-8" />
-            </div>
-            <CardTitle className="text-2xl">Teacher Authentication</CardTitle>
-            <CardDescription>
-                {step === 'login' ? 'Please enter your credentials to proceed.' : 'Complete the final security step.'}
-            </CardDescription>
+          <div className="mx-auto bg-primary/10 text-primary p-3 rounded-full w-fit">
+            <ShieldCheck className="w-8 h-8" />
+          </div>
+          <CardTitle className="text-2xl">Teacher Authentication</CardTitle>
+          <CardDescription>
+            {step === 'login' ? 'Please enter your credentials to proceed.' : 'Complete the final security step.'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-            <AnimatePresence mode="wait">
-                {step === 'login' ? (
-                     <motion.div
-                        key="login"
-                        exit={{ opacity: 0, x: -50 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <Form {...loginForm}>
-                            <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
-                                <FormField
-                                control={loginForm.control}
-                                name="username"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Username</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Enter your username" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                                <FormField
-                                control={loginForm.control}
-                                name="password"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Password</FormLabel>
-                                    <FormControl>
-                                        <Input type="password" placeholder="Enter your password" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                                <Button type="submit" className="w-full" disabled={isLoading}>
-                                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Verify Credentials
-                                </Button>
-                            </form>
-                        </Form>
-                    </motion.div>
-                ) : (
-                    <motion.div
-                        key="otp"
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <Form {...otpForm}>
-                             <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)} className="space-y-4">
-                                {!isOtpSent ? (
-                                    <div className="space-y-4">
-                                        <FormField
-                                            control={otpForm.control}
-                                            name="phone"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                <FormLabel>Your Phone Number</FormLabel>
-                                                <FormControl>
-                                    <Input type="tel" placeholder="024XXXXXXX" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <Button type="button" onClick={handleSendOtp} className="w-full" disabled={isLoading}>
-                                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Send OTP'}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                     <div className="space-y-4">
-                                        <p className="text-center text-sm text-muted-foreground">
-                                            Enter the 6-digit code sent to <span className="font-semibold text-foreground">{phoneForOtp}</span>.
-                                        </p>
-                                        <FormField
-                                            control={otpForm.control}
-                                            name="otp"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Verification Code</FormLabel>
-                                                    <FormControl>
-                                                    <Input
-                                                        placeholder="_ _ _ _ _ _"
-                                                        {...field}
-                                                        className="text-center text-lg tracking-[0.5em]"
-                                                        maxLength={6}
-                                                    />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <Button type="submit" className="w-full" disabled={isLoading}>
-                                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Login to Dashboard
-                                        </Button>
-                                    </div>
-                                )}
-                             </form>
-                        </Form>
-                         <Button variant="link" size="sm" className="mt-2 w-full" onClick={() => {
-                            setStep('login');
-                            setIsOtpSent(false);
-                            otpForm.reset();
-                            loginForm.reset();
-                         }}>
-                            Start Over
+          <AnimatePresence mode="wait">
+            {step === 'login' ? (
+              <motion.div
+                key="login"
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Form {...loginForm}>
+                  <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
+                    <FormField
+                      control={loginForm.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your username" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={loginForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Enter your password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Verify Credentials
+                    </Button>
+                  </form>
+                </Form>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="otp"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Form {...otpForm}>
+                  <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)} className="space-y-4">
+                    {!isOtpSent ? (
+                      <div className="space-y-4">
+                        <FormField
+                          control={otpForm.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Your Phone Number</FormLabel>
+                              <FormControl>
+                                <Input type="tel" placeholder="024XXXXXXX" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="button" onClick={handleSendOtp} className="w-full" disabled={isLoading}>
+                          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Send OTP'}
                         </Button>
-                        <div className="mt-4 text-center">
-                            <Link href="/login" className="text-sm text-blue-600 hover:text-blue-800 underline">
-                                Admin Portal Login
-                            </Link>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-center text-sm text-muted-foreground">
+                          Enter the 6-digit code sent to <span className="font-semibold text-foreground">{phoneForOtp}</span>.
+                        </p>
+                        <FormField
+                          control={otpForm.control}
+                          name="otp"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Verification Code</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="_ _ _ _ _ _"
+                                  {...field}
+                                  className="text-center text-lg tracking-[0.5em]"
+                                  maxLength={6}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Login to Dashboard
+                        </Button>
+                      </div>
+                    )}
+                  </form>
+                </Form>
+                <Button variant="link" size="sm" className="mt-2 w-full" onClick={() => {
+                  setStep('login');
+                  setIsOtpSent(false);
+                  otpForm.reset();
+                  loginForm.reset();
+                }}>
+                  Start Over
+                </Button>
+                <div className="mt-4 text-center">
+                  <Link href="/login" className="text-sm text-blue-600 hover:text-blue-800 underline">
+                    Admin Portal Login
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </CardContent>
       </Card>
     </div>

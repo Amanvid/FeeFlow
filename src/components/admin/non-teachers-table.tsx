@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -71,7 +72,7 @@ export default function NonTeachersTable({ nonTeachers }: { nonTeachers: NonTeac
     try {
       const url = '/api/admin/non-teachers';
       const method = selectedNonTeacher ? 'PUT' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -125,6 +126,55 @@ export default function NonTeachersTable({ nonTeachers }: { nonTeachers: NonTeac
     }
   };
 
+  const handleStatusToggle = async (nonTeacher: NonTeacherUser, checked: boolean) => {
+    try {
+      const newStatus = checked ? 'Active' : 'Inactive';
+      // Set dateStopped to today if inactive, empty string if active
+      const dateStopped = checked ? '' : new Date().toISOString().split('T')[0];
+
+      // Calculate Years of Service from Employment Date
+      let yearsOfService = '0';
+      if (nonTeacher.employmentDate) {
+        const empDate = new Date(nonTeacher.employmentDate);
+        if (!isNaN(empDate.getTime())) {
+          const today = new Date();
+          let years = today.getFullYear() - empDate.getFullYear();
+          const m = today.getMonth() - empDate.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < empDate.getDate())) {
+            years--;
+          }
+          yearsOfService = Math.max(0, years).toString();
+        }
+      }
+
+      const url = '/api/admin/non-teachers';
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...nonTeacher,
+          status: newStatus,
+          dateStopped: dateStopped,
+          yearsOfService: yearsOfService,
+          rowIndex: nonTeachers.findIndex(t => t.username === nonTeacher.username),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+
+      // Refresh the page to show updated data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      // Ideally show a toast error here
+    }
+  };
+
   const filteredNonTeachers = nonTeachers.filter((nonTeacher) =>
     nonTeacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     nonTeacher.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -164,8 +214,11 @@ export default function NonTeachersTable({ nonTeachers }: { nonTeachers: NonTeac
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Age</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Qualification</TableHead>
+                  <TableHead>Years</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Username</TableHead>
                   <TableHead>Actions</TableHead>
@@ -174,25 +227,52 @@ export default function NonTeachersTable({ nonTeachers }: { nonTeachers: NonTeac
               <TableBody>
                 {filteredNonTeachers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground">
                       {searchTerm ? "No non-teachers found matching your search" : "No non-teachers available"}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredNonTeachers.map((nonTeacher) => (
-                    <TableRow key={nonTeacher.username}>
+                  filteredNonTeachers.map((nonTeacher, index) => (
+                    <TableRow key={`${nonTeacher.username}-${index}`}>
                       <TableCell className="font-medium">{nonTeacher.name}</TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {nonTeacher.dateOfBirth ? (() => {
+                            const dob = new Date(nonTeacher.dateOfBirth);
+                            if (!isNaN(dob.getTime())) {
+                              const today = new Date();
+                              let age = today.getFullYear() - dob.getFullYear();
+                              const m = today.getMonth() - dob.getMonth();
+                              if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+                                age--;
+                              }
+                              return age;
+                            }
+                            return '-';
+                          })() : '-'}
+                        </span>
+                      </TableCell>
                       <TableCell>{nonTeacher.department}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{nonTeacher.role}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant={nonTeacher.status === 'active' ? 'default' : 'destructive'}
-                          className={nonTeacher.status === 'active' ? 'bg-green-600' : ''}
-                        >
-                          {nonTeacher.status}
-                        </Badge>
+                        <span className="text-sm">{nonTeacher.qualification || '-'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-medium">{nonTeacher.yearsOfService || '0'} years</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={nonTeacher.status.toLowerCase() === 'active'}
+                            onCheckedChange={(checked) => handleStatusToggle(nonTeacher, checked)}
+                            className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
+                          />
+                          <span className={`text-sm ${nonTeacher.status.toLowerCase() === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                            {nonTeacher.status}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="font-mono text-sm">{nonTeacher.username}</TableCell>
                       <TableCell>
@@ -204,16 +284,16 @@ export default function NonTeachersTable({ nonTeachers }: { nonTeachers: NonTeac
                           >
                             View Details
                           </Button>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleEditNonTeacher(nonTeacher)}
                             className="text-blue-600 hover:text-blue-700"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteClick(nonTeacher)}
                             className="text-red-600 hover:text-red-700"
@@ -249,7 +329,7 @@ export default function NonTeachersTable({ nonTeachers }: { nonTeachers: NonTeac
                   <div className="text-sm text-muted-foreground">@{selectedNonTeacher.username}</div>
                 </div>
               </div>
-              
+
               <div className="grid gap-4">
                 <div className="rounded-lg border p-3 space-y-2">
                   <div className="flex justify-between items-center">
@@ -262,7 +342,7 @@ export default function NonTeachersTable({ nonTeachers }: { nonTeachers: NonTeac
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Status:</span>
-                    <Badge 
+                    <Badge
                       variant={selectedNonTeacher.status === 'active' ? 'default' : 'destructive'}
                       className={selectedNonTeacher.status === 'active' ? 'bg-green-600' : ''}
                     >

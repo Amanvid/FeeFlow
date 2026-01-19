@@ -5,6 +5,7 @@ import { Users, UserPlus, TrendingUp, Award } from "lucide-react"
 import CustomStatsCards from "@/components/admin/admissions/custom-stats-cards"
 import ClassEnrollmentChart from "@/components/admin/admissions/class-enrollment-chart"
 import NewStudentsTable from "@/components/admin/admissions/new-students-table"
+import NewStudentModal from "@/components/admin/admissions/new-student-modal"
 
 export default async function AdmissionsDashboard() {
   const students = await getAllStudents();
@@ -118,6 +119,7 @@ export default async function AdmissionsDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Admissions Dashboard</h1>
+        <NewStudentModal classes={Object.keys(classEnrollment)} />
       </div>
 
       {/* Statistics Cards */}

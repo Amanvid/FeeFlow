@@ -4,7 +4,7 @@ import { GoogleSheetsService } from '@/lib/google-sheets';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, department, role, status, username, password, contact, location, dateCreated, dateUpdated } = body;
+    const { name, department, role, status, username, password, contact, location, employmentDate, dateStopped, dateOfBirth, qualification, yearsOfService } = body;
 
     if (!name || !department || !role || !status || !username || !password) {
       return NextResponse.json(
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const googleSheetsService = new GoogleSheetsService();
-    
+
     // Get current non-teachers data to find the next row
     const result = await googleSheetsService.getSheetData('Non-Teaching');
     if (!result.success) {
@@ -27,23 +27,41 @@ export async function POST(request: NextRequest) {
     const rows = result.data;
     const newRowIndex = rows.length; // Next available row
 
-    // Prepare the new non-teacher data
+    // Calculate Years of Service from Employment Date
+    let calculatedYearsOfService = '0';
+    if (employmentDate) {
+      const empDate = new Date(employmentDate);
+      if (!isNaN(empDate.getTime())) {
+        const today = new Date();
+        let years = today.getFullYear() - empDate.getFullYear();
+        const m = today.getMonth() - empDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < empDate.getDate())) {
+          years--;
+        }
+        calculatedYearsOfService = years.toString();
+      }
+    }
+
+    // Prepare the new non-teacher data (indices 0-12)
     const newNonTeacherData = [
-      name,
-      department,
-      role,
-      status,
-      username,
-      password,
-      contact || '',
-      location || '',
-      dateCreated || new Date().toISOString().split('T')[0],
-      dateUpdated || new Date().toISOString().split('T')[0]
+      name,                           // 0: Name
+      dateOfBirth || '',              // 1: Date of Birth
+      department,                     // 2: Department
+      role,                           // 3: Role
+      status,                         // 4: Status
+      username,                       // 5: Username
+      password,                       // 6: Password
+      qualification || '',            // 7: Qualification
+      contact || '',                  // 8: Contact
+      location || '',                 // 9: Location
+      employmentDate || '',           // 10: Employment Date
+      calculatedYearsOfService,       // 11: Years of Service (auto-calculated)
+      dateStopped || ''               // 12: Date Stopped
     ];
 
     // Append the new non-teacher to the sheet
-    const appendResult = await googleSheetsService.appendToSheet('Non-Teaching', newNonTeacherData);
-    
+    const appendResult = await googleSheetsService.appendToSheet('Non-Teaching', [newNonTeacherData]);
+
     if (!appendResult.success) {
       return NextResponse.json(
         { success: false, message: appendResult.message },
@@ -54,7 +72,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Non-teaching staff added successfully',
-      data: { name, department, role, status, username, password, contact, location, dateCreated, dateUpdated }
+      data: { name, department, role, status, username, password, contact, location, employmentDate, dateStopped }
     });
 
   } catch (error) {
@@ -69,7 +87,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { rowIndex, name, department, role, status, username, password, contact, location, dateCreated, dateUpdated } = body;
+    const { rowIndex, name, department, role, status, username, password, contact, location, employmentDate, dateStopped, dateOfBirth, qualification, yearsOfService } = body;
 
     if (!username) {
       return NextResponse.json(
@@ -79,7 +97,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const googleSheetsService = new GoogleSheetsService();
-    
+
     // Prepare only the fields that need to be updated (undefined fields won't be changed)
     const updates: any = {};
     if (name !== undefined) updates.name = name;
@@ -89,12 +107,15 @@ export async function PUT(request: NextRequest) {
     if (password !== undefined && password !== '') updates.password = password;
     if (contact !== undefined) updates.contact = contact;
     if (location !== undefined) updates.location = location;
-    if (dateCreated !== undefined) updates.dateCreated = dateCreated;
-    if (dateUpdated !== undefined) updates.dateUpdated = dateUpdated;
+    if (employmentDate !== undefined) updates.employmentDate = employmentDate;
+    if (dateStopped !== undefined) updates.dateStopped = dateStopped;
+    if (dateOfBirth !== undefined) updates.dateOfBirth = dateOfBirth;
+    if (qualification !== undefined) updates.qualification = qualification;
+    if (yearsOfService !== undefined) updates.yearsOfService = yearsOfService;
 
     // Use the new targeted update method that finds by username and only updates specified fields
-    const updateResult = await googleSheetsService.updateStaffByUsername('Non-Teachers', username, updates);
-    
+    const updateResult = await googleSheetsService.updateStaffByUsername('Non-Teaching', username, updates);
+
     if (!updateResult.success) {
       return NextResponse.json(
         { success: false, message: updateResult.message },
@@ -105,10 +126,10 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Non-teaching staff updated successfully',
-      data: { 
-        username, 
+      data: {
+        username,
         updatedFields: Object.keys(updates),
-        rowIndex: updateResult.data?.rowIndex 
+        rowIndex: updateResult.data?.rowIndex
       }
     });
 
@@ -134,10 +155,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     const googleSheetsService = new GoogleSheetsService();
-    
+
     // Delete the specific row (rowIndex + 1 to account for header row)
     const deleteResult = await googleSheetsService.deleteRowFromSheet('Non-Teaching', parseInt(rowIndex) + 1);
-    
+
     if (!deleteResult.success) {
       return NextResponse.json(
         { success: false, message: deleteResult.message },
