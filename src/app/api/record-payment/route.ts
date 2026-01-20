@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getAllStudents } from '@/lib/data';
 import { googleSheetsService } from '@/lib/google-sheets';
+import { DEFAULT_METADATA } from '@/lib/definitions';
 
 export async function POST(request: Request) {
   try {
-    const { studentId, studentName, studentClass, paymentType, amount, paymentMethod } = await request.json();
+    const { studentId, studentName, studentClass, paymentType, amount, paymentMethod, metadataSheet } = await request.json();
 
     // Validate required fields
     if (!studentId || !studentName || !studentClass || !paymentType || !amount) {
@@ -14,26 +15,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get all students to find the specific student
-    const students = await getAllStudents();
+    const targetSheet = metadataSheet || DEFAULT_METADATA;
+
+    // Get all students from the correct sheet to find the specific student
+    const students = await getAllStudents(targetSheet);
 
     // Find the student by ID, name, and class
-    const student = students.find(s => 
-      s.id === studentId && 
-      s.studentName.toLowerCase() === studentName.toLowerCase() && 
+    const student = students.find(s =>
+      s.id === studentId &&
+      s.studentName.toLowerCase() === studentName.toLowerCase() &&
       s.class.toLowerCase() === studentClass.toLowerCase()
     );
 
     if (!student) {
       return NextResponse.json(
-        { success: false, message: `Student '${studentName}' in class '${studentClass}' not found` },
+        { success: false, message: `Student '${studentName}' in class '${studentClass}' not found in ${targetSheet}` },
         { status: 404 }
       );
     }
 
     // Get the current row data for the student
     // Fetch sheet data with formulas visible so we can append correctly
-    const sheetData = await googleSheetsService.getSheetData('Metadata', undefined, 'FORMULA');
+    const sheetData = await googleSheetsService.getSheetData(targetSheet, undefined, 'FORMULA');
     if (!sheetData.success) {
       return NextResponse.json(
         { success: false, message: 'Failed to fetch sheet data' },
@@ -45,24 +48,24 @@ export async function POST(request: Request) {
     let studentRowIndex = -1;
     let studentRowData = null;
     let columnHeaders = null;
-    
+
     for (let i = 0; i < sheetData.data.length; i++) {
       const row = sheetData.data[i];
-      
+
       // First row should be headers
       if (i === 0) {
         columnHeaders = row;
         continue;
       }
-      
+
       // Check if this row matches our student (by student name)
       // Look for NAME column (case-insensitive search)
-      const nameColumnIndex = columnHeaders.findIndex((header: string) => 
+      const nameColumnIndex = columnHeaders.findIndex((header: string) =>
         header && header.toString().toLowerCase().includes('name')
       );
-      
-      if (nameColumnIndex !== -1 && row[nameColumnIndex] && 
-          row[nameColumnIndex].toString().toLowerCase() === student.studentName.toLowerCase()) {
+
+      if (nameColumnIndex !== -1 && row[nameColumnIndex] &&
+        row[nameColumnIndex].toString().toLowerCase() === student.studentName.toLowerCase()) {
         studentRowIndex = i + 1; // +1 because Sheets is 1-indexed
         studentRowData = [...row];
         break;
@@ -91,7 +94,7 @@ export async function POST(request: Request) {
     let updateColumnIndex = -1;
     let currentValue = 0;
     let paymentColumnName = '';
-    
+
     if (paymentType === 'School Fees') {
       // Always update the PAYMENT column with a formula string
       const paymentColumnIndex = findColumnIndex('PAYMENT');
@@ -125,7 +128,7 @@ export async function POST(request: Request) {
 
     } else if (paymentType === 'Books Fees') {
       const booksPaymentColumnIndex = findColumnIndex('BOOKS Fees Payment');
-      
+
       if (booksPaymentColumnIndex === -1) {
         return NextResponse.json(
           { success: false, message: 'Books Fees Payment column not found in sheet' },
@@ -159,11 +162,11 @@ export async function POST(request: Request) {
     }
 
     // Update the row in Google Sheets
-    const updateResult = await googleSheetsService.updateRowInSheet('Metadata', studentRowIndex, studentRowData);
+    const updateResult = await googleSheetsService.updateRowInSheet(targetSheet, studentRowIndex, studentRowData);
 
     if (updateResult.success) {
       // Optional: Record the payment in Claims sheet for invoice tracking
-      // This is optional since the main payment recording happens in Metadata sheet
+      // This is optional since the main payment recording happens in Cop-Metadata sheet
       const paymentRecord = [
         `PAY-${Date.now()}`,                // Invoice Number (for tracking)
         'Direct Payment',                   // Guardian Name

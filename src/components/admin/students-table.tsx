@@ -38,7 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const ITEMS_PER_PAGE = 15;
 
-export default function StudentsTable({ students }: { students: Student[] }) {
+export default function StudentsTable({ students, metadataSheet = "Cop-Metadata" }: { students: Student[], metadataSheet?: string }) {
   const router = useRouter();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,33 +72,34 @@ export default function StudentsTable({ students }: { students: Student[] }) {
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
-  
+
   const openReminderDialog = (student: Student) => {
     setSelectedStudent(student);
     setManualPhoneNumber(student.guardianPhone || "");
     setIsReminderDialog(true);
   };
-  
+
   const handleMakePayment = (student: Student) => {
     const params = new URLSearchParams({
-        purchaseType: 'fee',
-        bundle: `Fee for ${student.studentName}`,
-        credits: student.id,
-        price: student.balance > 0 ? student.balance.toString() : "0",
-        studentName: student.studentName,
-        class: student.class || '',
+      purchaseType: 'fee',
+      bundle: `Fee for ${student.studentName}`,
+      credits: student.id,
+      price: student.balance > 0 ? student.balance.toString() : "0",
+      studentName: student.studentName,
+      class: student.class || '',
+      metadataSheet: metadataSheet,
     });
     router.push(`/payment/purchase?${params.toString()}`);
   }
 
   const handleSendReminder = async (student: Student, phone?: string) => {
     const studentWithPhone = { ...student, guardianPhone: phone || student.guardianPhone };
-    
+
     if (studentWithPhone.balance <= 0) {
       toast({ variant: "destructive", title: "Cannot Send", description: "This student has no outstanding balance." });
       return;
     }
-    
+
     if (!studentWithPhone.guardianPhone) {
       toast({ variant: "destructive", title: "Cannot Send", description: "Please provide a guardian phone number." });
       return;
@@ -106,7 +107,7 @@ export default function StudentsTable({ students }: { students: Student[] }) {
 
     setLoadingReminder(student.id);
     setIsReminderDialog(false);
-    
+
     const result = await sendFeeReminderSms(studentWithPhone);
     if (result.success) {
       toast({
@@ -122,14 +123,14 @@ export default function StudentsTable({ students }: { students: Student[] }) {
     }
     setLoadingReminder(null);
   };
-  
+
   const handleViewSBA = (student: Student) => {
     const href = `/students/${encodeURIComponent(student.id)}/sba?class=${encodeURIComponent(student.class || '')}`;
     router.push(href);
   };
-  
+
   const handleDialogSend = () => {
-     if (selectedStudent && manualPhoneNumber) {
+    if (selectedStudent && manualPhoneNumber) {
       handleSendReminder(selectedStudent, manualPhoneNumber);
       setManualPhoneNumber('');
     }
@@ -141,25 +142,25 @@ export default function StudentsTable({ students }: { students: Student[] }) {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div>
-                  <CardTitle>Student List</CardTitle>
-                  <CardDescription>
-                      A comprehensive list of all students in the school.
-                  </CardDescription>
-              </div>
-              <div className="relative w-full sm:max-w-xs">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                      type="search"
-                      placeholder="Search by name, ID, class..."
-                      className="pl-8"
-                      value={searchQuery}
-                      onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setCurrentPage(1); // Reset to first page on search
-                      }}
-                  />
-              </div>
+            <div>
+              <CardTitle>Student List</CardTitle>
+              <CardDescription>
+                A comprehensive list of all students in the school.
+              </CardDescription>
+            </div>
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by name, ID, class..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -204,7 +205,7 @@ export default function StudentsTable({ students }: { students: Student[] }) {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button 
+                      <Button
                         size="sm"
                         variant="outline"
                         disabled={loadingReminder === student.id || student.balance <= 0}
@@ -218,10 +219,10 @@ export default function StudentsTable({ students }: { students: Student[] }) {
                         )}
                         Reminder
                       </Button>
-                      <Button 
-                          size="sm" 
-                          onClick={() => handleMakePayment(student)}
-                          disabled={student.balance <= 0}
+                      <Button
+                        size="sm"
+                        onClick={() => handleMakePayment(student)}
+                        disabled={student.balance <= 0}
                       >
                         <CreditCard className="mr-2 h-4 w-4" />
                         Pay
@@ -260,35 +261,35 @@ export default function StudentsTable({ students }: { students: Student[] }) {
         </CardContent>
         <CardFooter>
           <div className="flex items-center justify-between w-full">
-              <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               Showing{" "}
               <strong>
-                  {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredStudents.length)}
+                {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredStudents.length)}
               </strong>{" "}
               to{" "}
               <strong>
-                  {Math.min(currentPage * ITEMS_PER_PAGE, filteredStudents.length)}
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredStudents.length)}
               </strong>{" "}
               of <strong>{filteredStudents.length}</strong> students
-              </div>
-              <div className="flex items-center gap-2">
+            </div>
+            <div className="flex items-center gap-2">
               <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousPage}
-                  disabled={currentPage === 1}
+                variant="outline"
+                size="sm"
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
               >
-                  Previous
+                Previous
               </Button>
               <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages || paginatedStudents.length === 0}
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages || paginatedStudents.length === 0}
               >
-                  Next
+                Next
               </Button>
-              </div>
+            </div>
           </div>
         </CardFooter>
       </Card>
@@ -316,7 +317,7 @@ export default function StudentsTable({ students }: { students: Student[] }) {
             </div>
           </div>
           <DialogFooter>
-            <Button 
+            <Button
               onClick={handleDialogSend}
               disabled={loadingReminder === selectedStudent?.id || !manualPhoneNumber.trim()}
             >

@@ -36,7 +36,7 @@ export default function NewStudentsTable({ students }: NewStudentsTableProps) {
 
   const filteredStudents = students.filter((student) => {
     const matchesSearch = student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (student.id && student.id.toLowerCase().includes(searchTerm.toLowerCase()))
+      (student.id && student.id.toLowerCase().includes(searchTerm.toLowerCase()))
     return matchesSearch
   })
 
@@ -65,6 +65,7 @@ export default function NewStudentsTable({ students }: NewStudentsTableProps) {
       price: student.balance > 0 ? student.balance.toString() : "0",
       studentName: student.studentName,
       class: student.class || '',
+      metadataSheet: 'New-Metadata',
     });
     router.push(`/payment/purchase?${params.toString()}`);
   }
@@ -160,7 +161,7 @@ export default function NewStudentsTable({ students }: NewStudentsTableProps) {
                   className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>
-              
+
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
                 if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
                   return (
@@ -186,7 +187,7 @@ export default function NewStudentsTable({ students }: NewStudentsTableProps) {
                 }
                 return null
               })}
-              
+
               <PaginationItem>
                 <PaginationNext
                   href="#"

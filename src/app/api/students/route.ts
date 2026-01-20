@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllStudents } from '@/lib/data';
+import { NEW_METADATA, OLD_METADATA } from '@/lib/definitions';
 
 export async function GET(request: NextRequest) {
   try {
-    const students = await getAllStudents();
-    
+    const [newStudents, oldStudents] = await Promise.all([
+      getAllStudents(NEW_METADATA),
+      getAllStudents(OLD_METADATA)
+    ]);
+    const students = [...newStudents, ...oldStudents];
+
     return NextResponse.json({
       success: true,
       students: students,

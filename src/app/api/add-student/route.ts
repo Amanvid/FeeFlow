@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleSheetsService } from '@/lib/google-sheets';
+import { NEW_METADATA } from '@/lib/definitions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,8 +10,11 @@ export async function POST(request: NextRequest) {
       grade,
       studentType,
       gender,
-      guardianName,
-      guardianPhone,
+      dateOfBirth,
+      fatherName,
+      fatherContact,
+      motherName,
+      motherContact,
       schoolFeesAmount,
       initialAmountPaid,
       admissionDate,
@@ -20,7 +24,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!name || !grade || !guardianName || !guardianPhone) {
+    if (!name || !grade) {
       return NextResponse.json(
         { success: false, message: 'Missing required fields' },
         { status: 400 }
@@ -30,7 +34,7 @@ export async function POST(request: NextRequest) {
     const sheetsService = new GoogleSheetsService();
 
     // Get current data to determine class sections and insertion point
-    const currentDataResult = await sheetsService.getSheetData('Metadata');
+    const currentDataResult = await sheetsService.getSheetData(NEW_METADATA);
     if (!currentDataResult.success) {
       return NextResponse.json(
         { success: false, message: 'Failed to read current student data' },
@@ -100,17 +104,16 @@ export async function POST(request: NextRequest) {
 
       // Determine where to insert the new student
       if (lastStudentInSection >= 0) {
-        // Insert BEFORE the last student (Last but one place)
-        // If there's only 1 student, we still insert at that position (pushing the existing one down)
-        // Ensure we don't go before the headers
-        insertRowIndex = lastStudentInSection;
+        // Insert BEFORE the last student (making new student "last but one" / second-to-last)
+        // This places the new student one position before the current last student
+        insertRowIndex = lastStudentInSection - 1;
 
         // Safety check: if insertRowIndex <= headersRowIndex, put it after headers (first item)
         if (insertRowIndex <= headersRowIndex) {
           insertRowIndex = headersRowIndex + 1;
         }
 
-        // We still calculate the student number based on the max in class + 1
+        // Calculate student number based on max in class + 1
         nextStudentNumber = maxStudentNumberInTargetClass + 1;
       } else {
         // Target class section not found, append at the end
@@ -135,10 +138,34 @@ export async function POST(request: NextRequest) {
       const headerLower = header.toLowerCase();
       const colLetter = String.fromCharCode(65 + index); // A, B, C, etc.
 
-      if (headerLower.includes('no.')) {
+      // EXPLICIT COLUMN INDEX CHECKS FIRST (to prevent generic checks from overriding)
+      if (index === 2) {
+        // STRICTLY Column C: Date of Birth
+        newStudentRow[index] = dateOfBirth || '';
+      } else if (index === 16) {
+        // STRICTLY Column Q: Father's Name
+        newStudentRow[index] = fatherName || '';
+      } else if (index === 17) {
+        // STRICTLY Column R: Father's Contact
+        newStudentRow[index] = fatherContact || '';
+      } else if (index === 18) {
+        // STRICTLY Column S: Mother's Name
+        newStudentRow[index] = motherName || '';
+      } else if (index === 19) {
+        // STRICTLY Column T: Mother's Contact
+        newStudentRow[index] = motherContact || '';
+      } else if (index === 20) {
+        // STRICTLY Column U: Location
+        newStudentRow[index] = location || '';
+      } else if (index === 21) {
+        // STRICTLY Column V: Notes
+        newStudentRow[index] = notes || '';
+        // HEADER-BASED CHECKS (fallback for columns not explicitly mapped above)
+      } else if (headerLower.includes('no.')) {
         newStudentRow[index] = nextStudentNumber.toString();
       } else if (headerLower.includes('parent name') || headerLower.includes('guardian name')) {
-        newStudentRow[index] = guardianName;
+        // Skip - we don't have guardian name anymore
+        newStudentRow[index] = '';
       } else if (headerLower.includes('gender')) {
         newStudentRow[index] = gender || 'Other';
       } else if (headerLower.includes('grade')) {
@@ -146,7 +173,7 @@ export async function POST(request: NextRequest) {
       } else if (headerLower.includes('student type')) {
         newStudentRow[index] = 'New'; // Always set to New
       } else if (headerLower === 'class' || headerLower === 'category' || (index === 4 && header === '')) {
-        // If it's column E or specifically named Class/Category, put the prefix of the grade (e.g. "Nursery")
+        // If it's column E or specifically named Class/Category, put the prefix of the grade (e.g. \"Nursery\")
         newStudentRow[index] = grade.split(' ')[0];
       } else if (headerLower.includes('name')) {
         // This catch-all for 'name' should be after more specific name checks like 'parent name'
@@ -222,7 +249,8 @@ export async function POST(request: NextRequest) {
         const initialPaidLetter = String.fromCharCode(65 + initialPaidCol);
         newStudentRow[index] = `=${booksFeesLetter}${currentRow}-${schoolFeesLetter}${currentRow}-${initialPaidLetter}${currentRow}`;
       } else if (headerLower.includes('contact') || headerLower.includes('phone')) {
-        newStudentRow[index] = guardianPhone;
+        // Skip - we don't have guardian phone anymore
+        newStudentRow[index] = '';
       } else if (headerLower.includes('location')) {
         newStudentRow[index] = location || '';
       } else if (headerLower.includes('admission date') || headerLower.includes('date')) {
@@ -238,16 +266,16 @@ export async function POST(request: NextRequest) {
     let insertResult;
     if (insertRowIndex > 0) {
       // Insert at specific row - insertRowAt expects 1-based row index
-      insertResult = await sheetsService.insertRowAt('Metadata', currentRow, newStudentRow);
+      insertResult = await sheetsService.insertRowAt(NEW_METADATA, currentRow, newStudentRow);
     } else {
       // Append to end
-      insertResult = await sheetsService.appendToSheet('Metadata', [newStudentRow]);
+      insertResult = await sheetsService.appendToSheet(NEW_METADATA, [newStudentRow]);
     }
 
     // Post-insertion: Renumber Column A (No.) for ALL students to be sequential
     if (insertResult.success && headersRowIndex >= 0) {
       // Fetch all data again to renumber
-      const updatedDataResult = await sheetsService.getSheetData('Metadata');
+      const updatedDataResult = await sheetsService.getSheetData(NEW_METADATA);
       if (updatedDataResult.success) {
         const rows = updatedDataResult.data;
         let dataStartIndex = -1;
@@ -277,7 +305,7 @@ export async function POST(request: NextRequest) {
         if (updates.length > 0) {
           // Apply batch update to Column A
           await sheetsService.updateSheet(
-            'Metadata',
+            NEW_METADATA,
             `A${dataStartIndex + 1}:A${dataStartIndex + updates.length}`,
             updates
           );

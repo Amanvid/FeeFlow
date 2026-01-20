@@ -3,6 +3,7 @@
 "use server";
 
 import type { Student, SchoolConfig, PhoneClaim, InvoiceGenerationClaim, AdminUser, TeacherUser, NonTeacherUser, SBARecord, SBASummary, TeacherUserWithPassword, AdminUserWithPassword, ClassBookConfig } from './definitions';
+import { NEW_METADATA, OLD_METADATA, DEFAULT_METADATA } from './definitions';
 import { PlaceHolderImages } from './placeholder-images';
 import { GoogleSheetsService } from './google-sheets';
 
@@ -499,15 +500,15 @@ function getGuardianPhoneFromRow(row: any): string {
 }
 
 
-export async function getAllStudents(): Promise<Student[]> {
+export async function getAllStudents(metadataSheet: string = DEFAULT_METADATA): Promise<Student[]> {
   try {
     if (VERBOSE_LOGGING) {
-      console.log(`Fetching students from Google Sheets via Service Account: ${SPREADSHEET_ID}`);
+      console.log(`Fetching students from Google Sheets (${metadataSheet}) via Service Account: ${SPREADSHEET_ID}`);
     }
 
     // Use GoogleSheetsService directly as it is imported at the top
     const googleSheetsService = new GoogleSheetsService();
-    const result = await googleSheetsService.getSheetData('Metadata');
+    const result = await googleSheetsService.getSheetData(metadataSheet);
 
     if (!result.success) {
       console.error(`Failed to fetch students sheet: ${result.message}`);
@@ -584,6 +585,7 @@ export async function getAllStudents(): Promise<Student[]> {
         gender: gender,
         guardianName: s['Parent Name'] || '',
         guardianPhone: getGuardianPhoneFromRow(s),
+        metadataSheet: metadataSheet,
       };
       return student;
     }).filter(s => s.studentName && s.class);
@@ -600,8 +602,8 @@ export async function getAllStudents(): Promise<Student[]> {
 }
 
 
-export async function getClasses(): Promise<string[]> {
-  const students = await getAllStudents();
+export async function getClasses(metadataSheet: string = DEFAULT_METADATA): Promise<string[]> {
+  const students = await getAllStudents(metadataSheet);
   if (!students || students.length === 0) {
     console.log("No students found, returning empty class list.");
     return [];
@@ -610,9 +612,9 @@ export async function getClasses(): Promise<string[]> {
   return classes.filter(c => c);
 }
 
-export async function getStudentsByClass(className: string): Promise<Student[]> {
-  console.log(`getStudentsByClass called with className: "${className}"`);
-  const allStudents = await getAllStudents();
+export async function getStudentsByClass(className: string, metadataSheet: string = DEFAULT_METADATA): Promise<Student[]> {
+  console.log(`getStudentsByClass called with className: "${className}" from ${metadataSheet}`);
+  const allStudents = await getAllStudents(metadataSheet);
   console.log(`Total students fetched: ${allStudents.length}`);
   console.log('Sample student classes:', allStudents.slice(0, 3).map(s => s.class));
 
@@ -626,8 +628,8 @@ export async function getStudentsByClass(className: string): Promise<Student[]> 
   return filteredStudents;
 }
 
-export async function getStudentById(studentId: string): Promise<Student | undefined> {
-  const allStudents = await getAllStudents();
+export async function getStudentById(studentId: string, metadataSheet: string = DEFAULT_METADATA): Promise<Student | undefined> {
+  const allStudents = await getAllStudents(metadataSheet);
   const student = allStudents.find(s => s.id === studentId);
   return student;
 }

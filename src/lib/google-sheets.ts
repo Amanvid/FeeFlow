@@ -572,6 +572,7 @@ export class GoogleSheetsService {
         'FALSE', // Paid status - default to false (uppercase for Google Sheets)
         '', // Payment date - empty initially
         '', // Payment reference - empty initially
+        (claim as any).metadataSheet || 'Cop-Metadata', // Metadata Source (column 13)
       ];
 
       // If headers need to be added
@@ -588,7 +589,8 @@ export class GoogleSheetsService {
           'Timestamp',
           'Paid',
           'Payment Date',
-          'Payment Reference'
+          'Payment Reference',
+          'Metadata Source'
         ];
 
         // First add the headers
@@ -597,7 +599,7 @@ export class GoogleSheetsService {
         if (existingRowIndex >= 0) {
           // If we found an existing row but we're adding headers, we need to update the data
           // The existing row will now be at index + 2 (header row + 1-based indexing)
-          return await this.updateSheet('Claims', `A${existingRowIndex + 2}:L${existingRowIndex + 2}`, [rowData]);
+          return await this.updateSheet('Claims', `A${existingRowIndex + 2}:M${existingRowIndex + 2}`, [rowData]);
         } else {
           // Add the new data row
           return await this.appendToSheet('Claims', [rowData]);
@@ -606,7 +608,7 @@ export class GoogleSheetsService {
         // Headers exist
         if (existingRowIndex >= 0) {
           // Update existing invoice
-          return await this.updateSheet('Claims', `A${existingRowIndex + 1}:L${existingRowIndex + 1}`, [rowData]);
+          return await this.updateSheet('Claims', `A${existingRowIndex + 1}:M${existingRowIndex + 1}`, [rowData]);
         } else {
           // Add new invoice
           return await this.appendToSheet('Claims', [rowData]);
@@ -669,7 +671,7 @@ export class GoogleSheetsService {
       updatedRow[10] = paymentDate; // Payment Date column
       updatedRow[11] = paymentReference; // Payment Reference column
 
-      return await this.updateSheet('Claims', `A${rowIndex}:L${rowIndex}`, [updatedRow]);
+      return await this.updateSheet('Claims', `A${rowIndex}:M${rowIndex}`, [updatedRow]);
     } catch (error) {
       console.error('Error updating invoice payment status:', error);
       return {
@@ -721,7 +723,8 @@ export class GoogleSheetsService {
           guardianPhone: row[2] || '',
           studentName: row[4] || '',
           studentClass: row[5] || '',
-          dueDate: row[7] || ''
+          dueDate: row[7] || '',
+          metadataSource: row[12] || 'Cop-Metadata'
         };
       });
 
@@ -827,9 +830,10 @@ export class GoogleSheetsService {
         invoiceData.status === 'PAID' ? 'TRUE' : 'FALSE', // Paid - convert from status
         invoiceData.updatedAt || currentRow[10] || '', // Payment Date
         invoiceData.reference || currentRow[11] || '', // Payment Reference
+        invoiceData.metadataSource || currentRow[12] || 'Cop-Metadata', // Metadata Source
       ];
 
-      return await this.updateSheet('Claims', `A${rowIndex}:L${rowIndex}`, [updatedRow]);
+      return await this.updateSheet('Claims', `A${rowIndex}:M${rowIndex}`, [updatedRow]);
     } catch (error) {
       console.error('Error updating invoice:', error);
       return { success: false, message: `Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}` };

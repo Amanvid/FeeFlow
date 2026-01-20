@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleSheetsService } from '@/lib/google-sheets';
+import { DEFAULT_METADATA } from '@/lib/definitions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +12,10 @@ export async function POST(request: NextRequest) {
       amount,
       paymentMethod,
       notes,
+      metadataSheet,
     } = body;
+
+    const targetSheet = metadataSheet || DEFAULT_METADATA;
 
     // Validate required fields
     if (!studentName || !studentClass || !paymentType || !amount) {
@@ -22,9 +26,10 @@ export async function POST(request: NextRequest) {
     }
 
     const sheetsService = new GoogleSheetsService();
+    const targetSheet = metadataSheet || 'Cop-Metadata';
 
-    // Get current student data from Metadata sheet
-    const currentDataResult = await sheetsService.getSheetData('Metadata');
+    // Get current student data from the correct sheet
+    const currentDataResult = await sheetsService.getSheetData(targetSheet);
     if (!currentDataResult.success) {
       return NextResponse.json(
         { success: false, message: 'Failed to read student data' },
@@ -43,12 +48,12 @@ export async function POST(request: NextRequest) {
     // Find the student by name and class
     let studentRowIndex = -1;
     let studentData: string[] = [];
-    
+
     for (let i = 1; i < currentData.length; i++) {
       const row = currentData[i];
       const nameMatch = row[1] && row[1].toLowerCase().includes(studentName.toLowerCase());
       const classMatch = row[2] && row[2].toLowerCase() === studentClass.toLowerCase();
-      
+
       if (nameMatch && classMatch) {
         studentRowIndex = i;
         studentData = [...row];
@@ -66,7 +71,7 @@ export async function POST(request: NextRequest) {
     // Determine which column to update based on payment type
     let updateColumnIndex = -1;
     let currentValue = 0;
-    
+
     if (paymentType === 'School Fees') {
       updateColumnIndex = 9; // PAYMENT column (index 9)
       currentValue = parseFloat(studentData[9] || '0');
@@ -84,12 +89,12 @@ export async function POST(request: NextRequest) {
 
     // Calculate new payment amount
     const newPaymentAmount = currentValue + amount;
-    
+
     // Update the student data
     studentData[updateColumnIndex] = newPaymentAmount.toFixed(2);
 
     // Update the row in Google Sheets (rowIndex + 1 because Sheets is 1-indexed and we have headers)
-    const updateResult = await sheetsService.updateRowInSheet('Metadata', studentRowIndex + 1, studentData);
+    const updateResult = await sheetsService.updateRowInSheet(targetSheet, studentRowIndex + 1, studentData);
 
     if (updateResult.success) {
       // Also record the payment in a separate Payments sheet for tracking

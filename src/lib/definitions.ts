@@ -1,6 +1,11 @@
 
 // Existing interfaces...
 
+// Metadata Sheet Constants
+export const NEW_METADATA = 'New-Metadata';
+export const OLD_METADATA = 'Old-Metadata';
+export const DEFAULT_METADATA = 'Cop-Metadata';
+
 // Student Interface
 export interface Student {
   id: string;
@@ -17,6 +22,7 @@ export interface Student {
   booksFeePaid: number;
   balance: number;
   amountPaid: number;
+  metadataSheet?: string;
 }
 
 export interface PhoneClaim {
@@ -30,6 +36,7 @@ export interface PhoneClaim {
   dueDate: string;
   timestamp: string;
   paid?: boolean;
+  metadataSource?: string;
 }
 
 export interface TeacherUserWithPassword {

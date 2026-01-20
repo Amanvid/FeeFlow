@@ -7,13 +7,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getAllStudents, getTeacherUsers, getNonTeacherUsers } from "@/lib/data";
+import { NEW_METADATA, OLD_METADATA } from "@/lib/definitions";
 import { cn } from "@/lib/utils";
 import ClassEnrollmentChart from "@/components/admin/charts/class-enrollment-chart";
 import StaffStatusPieChart from "@/components/admin/staff-status-pie-chart";
 import GenderPieChart from "@/components/admin/gender-pie-chart";
 
 export default async function AdminDashboard() {
-  const students = await getAllStudents();
+  const [newStudentsMeta, oldStudentsMeta] = await Promise.all([
+    getAllStudents(NEW_METADATA),
+    getAllStudents(OLD_METADATA)
+  ]);
+  const students = [...newStudentsMeta, ...oldStudentsMeta];
   const teachers = await getTeacherUsers();
   const nonTeachers = await getNonTeacherUsers();
 
@@ -119,6 +124,35 @@ export default async function AdminDashboard() {
       return indexA - indexB;
     });
 
+  // Calculate Top Enrollment Class (class with most total students)
+  const topEnrollmentClass = chartData.reduce((max, item) =>
+    item.students > max.students ? item : max,
+    chartData[0] || { name: "N/A", students: 0 }
+  );
+
+  // Calculate Most Admission Class (class with most new admissions)
+  const newAdmissionsByClass = newStudents.reduce((acc, student) => {
+    if (student.class) {
+      acc[student.class] = (acc[student.class] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  const admissionChartData = Object.entries(newAdmissionsByClass)
+    .map(([name, count]) => ({ name, admissions: count }))
+    .sort((a, b) => {
+      const indexA = classOrder.indexOf(a.name);
+      const indexB = classOrder.indexOf(b.name);
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+
+  const mostAdmissionClass = admissionChartData.reduce((max, item) =>
+    item.admissions > max.admissions ? item : max,
+    admissionChartData[0] || { name: "N/A", admissions: 0 }
+  );
+
   const StatCard = ({ title, value, description, className, icon: Icon }: { title: string, value: string | number, description: string, className?: string, icon?: React.ElementType }) => (
     <Card className={cn("text-white", className)}>
       <CardHeader className="pb-2">
@@ -173,71 +207,84 @@ export default async function AdminDashboard() {
 
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-4">
-        {/* Admission Fees Excluding Books & Uniforms */}
-        <StatCard
-          title="Admission - Students Books"
-          value={`GH₵${admissionStudentsBooks.toLocaleString()}`}
-          description={`${newAdmissions} New Students (books included in admission)`}
-          className="bg-cyan-600"
-        />
-        <StatCard
-          title="Old student Books fees"
-          value={`GH₵${oldStudentsBooks.toLocaleString()}`}
-          description="Sum of all books fee payments from Old Students."
-          className="bg-teal-600"
-        />
-        <StatCard
-          title="Admission Fees (Excl. Books & Uniforms)"
+        {/* Row 1: Detailed Financial Breakdown */}
+        <SmallStatCard
+          title="Admission Fees"
           value={`GH₵${admissionFeesExcludingBooksAndUniforms.toLocaleString()}`}
-          description={`${newAdmissions} New Students - Admission fees only (excludes books & GH₵300 uniform per Student)`}
+          description={`From ${newAdmissions} new students`}
           className="bg-purple-600"
         />
-
-        {/* Uniform Fees */}
-        <StatCard
-          title="New Students Uniform Fees Collected"
+        <SmallStatCard
+          title="Old Student Fees"
+          value={`GH₵${students.filter(s => s.studentType === 'Old').reduce((acc, s) => acc + s.schoolFeesPaid, 0).toLocaleString()}`}
+          description={`From ${oldStudents} old students`}
+          className="bg-indigo-600"
+        />
+        <SmallStatCard
+          title="Books (Both)"
+          value={`GH₵${totalBooksPaid.toLocaleString()}`}
+          description="New and old students"
+          className="bg-cyan-600"
+        />
+        <SmallStatCard
+          title="Uniforms (Both)"
           value={`GH₵${totalUniformFees.toLocaleString()}`}
-          description={`${newAdmissions} New Students × GH₵300 per uniform`}
+          description={`${newAdmissions} new students`}
           className="bg-orange-600"
         />
-
-        {/* New Admissions Statistics Card - REMOVED */}
-
-        {/* New Students Gender Breakdown - REMOVED */}
-
-        {/* New Students Fees Collection - REMOVED */}
-
-
-        {/* Student Payment Status - REMOVED PAYMENT STATUS CARDS */}
-
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-4">
-        {/* Student Demographics */}
-        <StatCard
+        {/* Row 2: School Fees & Student Counts */}
+        <SmallStatCard
+          title="School Fees (Both)"
+          value={`GH₵${totalFeesPaid.toLocaleString()}`}
+          description="Combined school fees"
+          className="bg-sky-600"
+        />
+        <SmallStatCard
           title="Total Students"
           value={totalStudents}
-          description="Total number of students enrolled."
+          description="Enrolled students"
           className="bg-slate-700"
         />
-        <StatCard
-          title="New Admissions"
+        <SmallStatCard
+          title="New Students"
           value={newAdmissions}
-          description="Total New Students admitted this term."
+          description="Admitted this term"
           className="bg-fuchsia-500"
         />
-        <StatCard
+        <SmallStatCard
           title="Old Students"
           value={oldStudents}
-          description="Total number of continuing students."
+          description="Continuing students"
           className="bg-lime-600"
         />
-
-        {/* Staff Statistics */}
-        <StatCard
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-4">
+        {/* Row 3: Staff & Enrollment Insights */}
+        <SmallStatCard
           title="Total Staff"
           value={totalStaff}
-          description="All teaching and non-teaching staff."
+          description="Teaching and non-teaching"
           className="bg-amber-600"
+        />
+        <SmallStatCard
+          title="Top Enrollment Class"
+          value={topEnrollmentClass.name}
+          description={`${topEnrollmentClass.students} students`}
+          className="bg-emerald-600"
+        />
+        <SmallStatCard
+          title="Most Admission Class"
+          value={mostAdmissionClass.name}
+          description={`${mostAdmissionClass.admissions} new admissions`}
+          className="bg-rose-600"
+        />
+        <SmallStatCard
+          title="Empty"
+          value="N/A"
+          description="Future metric"
+          className="bg-gray-400"
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 mt-4">

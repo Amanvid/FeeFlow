@@ -1,4 +1,5 @@
 import { getAllStudents } from "@/lib/data"
+import { NEW_METADATA } from "@/lib/definitions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Users, UserPlus, TrendingUp, Award } from "lucide-react"
@@ -8,12 +9,12 @@ import NewStudentsTable from "@/components/admin/admissions/new-students-table"
 import NewStudentModal from "@/components/admin/admissions/new-student-modal"
 
 export default async function AdmissionsDashboard() {
-  const students = await getAllStudents();
-  
+  const students = await getAllStudents(NEW_METADATA);
+
   // Calculate statistics based on requirements
   const totalStudents = students.length
   const newAdmissions = students.filter(student => student.studentType === 'New').length
-  
+
   // Gender statistics (only for new admissions)
   const newAdmissionsStudents = students.filter(student => student.studentType === 'New')
   const maleStudents = newAdmissionsStudents.filter(student => student.gender === 'Male').length
@@ -21,13 +22,13 @@ export default async function AdmissionsDashboard() {
   const newAdmissionsTotal = newAdmissionsStudents.length
   const malePercentage = newAdmissionsTotal > 0 ? Math.round((maleStudents / newAdmissionsTotal) * 100) : 0
   const femalePercentage = newAdmissionsTotal > 0 ? Math.round((femaleStudents / newAdmissionsTotal) * 100) : 0
-  
+
   // Class enrollment statistics
   const classEnrollment = students.reduce((acc, student) => {
     acc[student.class] = (acc[student.class] || 0) + 1
     return acc
   }, {} as Record<string, number>)
-  
+
   // New admissions by class
   const newAdmissionsByClass = students
     .filter(student => student.studentType === 'New')
@@ -35,45 +36,45 @@ export default async function AdmissionsDashboard() {
       acc[student.class] = (acc[student.class] || 0) + 1
       return acc
     }, {} as Record<string, number>)
-  
+
   // Find top enrollment class (handle ties)
   const sortedEnrollment = Object.entries(classEnrollment)
-    .sort(([,a], [,b]) => b - a)
-  
+    .sort(([, a], [, b]) => b - a)
+
   // Find all classes with the highest enrollment (handle ties)
   const maxEnrollment = sortedEnrollment[0]?.[1] || 0
   const topEnrollmentClasses = sortedEnrollment
-    .filter(([,count]) => count === maxEnrollment)
+    .filter(([, count]) => count === maxEnrollment)
     .map(([className, count]) => [className, count] as [string, number])
-  
+
   // Format for display: show all tied classes
-  const topEnrollmentClass = topEnrollmentClasses.length > 1 
+  const topEnrollmentClass = topEnrollmentClasses.length > 1
     ? [`${topEnrollmentClasses.map(([name]) => name).join(' & ')}`, maxEnrollment] as [string, number]
     : topEnrollmentClasses[0] || undefined
-  
+
   // Find most admissions class (handle ties)
   const sortedAdmissions = Object.entries(newAdmissionsByClass)
-    .sort(([,a], [,b]) => b - a)
-  
+    .sort(([, a], [, b]) => b - a)
+
   const maxAdmissions = sortedAdmissions[0]?.[1] || 0
   const topAdmissionsClasses = sortedAdmissions
-    .filter(([,count]) => count === maxAdmissions)
+    .filter(([, count]) => count === maxAdmissions)
     .map(([className, count]) => [className, count] as [string, number])
-  
+
   // Format for display: show all tied classes
   const mostAdmissionsClass = topAdmissionsClasses.length > 1
     ? [`${topAdmissionsClasses.map(([name]) => name).join(' & ')}`, maxAdmissions] as [string, number]
     : topAdmissionsClasses[0] || undefined
-  
+
   // New students list
   const newStudents = students.filter(student => student.studentType === 'New')
-  
+
   // New students fees calculations - Restructured breakdown
   const UNIFORM_COST = 300;
-  
+
   // 1. Total admission fees (expected from new students)
   const totalNewStudentsFees = newStudents.reduce((sum, student) => sum + student.fees, 0)
-  
+
   // 2. Books price by class - calculate from all students to get class-based book prices
   const booksPriceByClass = students.reduce((acc, student) => {
     if (student.class && student.books > 0) {
@@ -81,24 +82,24 @@ export default async function AdmissionsDashboard() {
     }
     return acc;
   }, {} as Record<string, number>);
-  
+
   // 3. Admitted student books fees (calculated based on class book prices)
   const admittedStudentBooksFees = newStudents.reduce((sum, student) => {
     const classBookPrice = booksPriceByClass[student.class] || 0;
     return sum + classBookPrice;
   }, 0)
-  
+
   // 4. Admitted student uniforms fees (GH₵300 per student)
   const admittedStudentUniformsFees = newStudents.length * UNIFORM_COST
-  
+
   // 5. Total amount paid by new students
   const totalNewStudentsPaid = newStudents.reduce((sum, student) => sum + student.amountPaid, 0)
-  
+
   // 6. Outstanding fees (balance remaining)
   const totalNewStudentsOutstanding = newStudents.reduce((sum, student) => sum + student.balance, 0)
-  
+
   // 7. Collection percentage
-  const newStudentsFeesCollectionPercentage = totalNewStudentsFees > 0 ? 
+  const newStudentsFeesCollectionPercentage = totalNewStudentsFees > 0 ?
     Math.round((totalNewStudentsPaid / totalNewStudentsFees) * 100) : 0
 
   // 8. Admission fees excluding books and uniforms (for reference)
@@ -123,7 +124,7 @@ export default async function AdmissionsDashboard() {
       </div>
 
       {/* Statistics Cards */}
-      <CustomStatsCards 
+      <CustomStatsCards
         totalStudents={totalStudents}
         newAdmissions={newAdmissions}
         maleStudents={maleStudents}
@@ -151,7 +152,7 @@ export default async function AdmissionsDashboard() {
           <TabsTrigger value="new-admissions">New Admissions</TabsTrigger>
           <TabsTrigger value="comparison">Comparison</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="overview" className="space-y-4">
           {/* Comparison Overview Section */}
           <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900">
@@ -159,7 +160,7 @@ export default async function AdmissionsDashboard() {
               <CardTitle className="text-indigo-800 dark:text-indigo-200">Comparison Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              <ClassEnrollmentChart 
+              <ClassEnrollmentChart
                 classEnrollment={classEnrollment}
                 newAdmissionsByClass={newAdmissionsByClass}
                 showComparison={true}
@@ -167,12 +168,12 @@ export default async function AdmissionsDashboard() {
               />
             </CardContent>
           </Card>
-          
+
           {/* New Admissions Section */}
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900">
               <CardContent className="pt-6">
-                <ClassEnrollmentChart 
+                <ClassEnrollmentChart
                   classEnrollment={classEnrollment}
                   newAdmissionsByClass={newAdmissionsByClass}
                   showNewOnly={true}
@@ -180,7 +181,7 @@ export default async function AdmissionsDashboard() {
                 />
               </CardContent>
             </Card>
-            
+
             <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
               <CardHeader>
                 <CardTitle className="text-blue-800 dark:text-blue-200">New Students This Year</CardTitle>
@@ -192,7 +193,7 @@ export default async function AdmissionsDashboard() {
             </Card>
           </div>
         </TabsContent>
-        
+
         <TabsContent value="enrollment" className="space-y-4">
           <Card>
             <CardHeader>
@@ -200,7 +201,7 @@ export default async function AdmissionsDashboard() {
               <CardDescription>Total students in each class</CardDescription>
             </CardHeader>
             <CardContent>
-              <ClassEnrollmentChart 
+              <ClassEnrollmentChart
                 classEnrollment={classEnrollment}
                 newAdmissionsByClass={newAdmissionsByClass}
                 showComparison={false}
@@ -209,11 +210,11 @@ export default async function AdmissionsDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="new-admissions" className="space-y-4">
           <Card>
             <CardContent>
-              <ClassEnrollmentChart 
+              <ClassEnrollmentChart
                 classEnrollment={classEnrollment}
                 newAdmissionsByClass={newAdmissionsByClass}
                 showNewOnly={true}
@@ -222,14 +223,14 @@ export default async function AdmissionsDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="comparison" className="space-y-4">
           <Card>
             <CardHeader>
               <CardDescription>Comparison of total enrollment and new admissions by class</CardDescription>
             </CardHeader>
             <CardContent>
-              <ClassEnrollmentChart 
+              <ClassEnrollmentChart
                 classEnrollment={classEnrollment}
                 newAdmissionsByClass={newAdmissionsByClass}
                 showComparison={true}

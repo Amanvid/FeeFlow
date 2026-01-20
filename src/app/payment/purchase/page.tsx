@@ -22,7 +22,7 @@ function PurchaseContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { toast } = useToast();
-    
+
     // --- State Management ---
     // Step 1: Choose Method, Step 2: Phone for MoMo/QR, Step 3: MoMo Instructions, Step 4: QR Display
     const [step, setStep] = useState(1);
@@ -30,12 +30,12 @@ function PurchaseContent() {
     const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [qrPayload, setQrPayload] = useState<string | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<'ghana-qr' | 'momo' | null>(null);
-    
+
     // State for MoMo/QR flow
     const [phoneNumber, setPhoneNumber] = useState('');
     const [otp, setOtp] = useState('');
     const [isOtpSent, setIsOtpSent] = useState(false);
-    
+
     // State for pricing
     const [transactionFee, setTransactionFee] = useState<number | null>(null);
     const [totalAmount, setTotalAmount] = useState<number | null>(null);
@@ -43,7 +43,7 @@ function PurchaseContent() {
     // --- Constants and URL Params ---
     const merchantNumber = '0536282694';
     const momoPaymentLink = 'https://appbiz.momo.africa/momo/kashme/233536282694';
-    
+
     const purchaseType = searchParams.get('purchaseType') || 'sms';
     const userPhoneFromUrl = searchParams.get('userPhone');
     const redirectUrl = purchaseType === 'fee' ? '/check-fees' : '/communications';
@@ -63,7 +63,7 @@ function PurchaseContent() {
             setTransactionFee(fee);
             setTotalAmount(price + fee);
         }
-        
+
         if (userPhoneFromUrl) {
             setPhoneNumber(userPhoneFromUrl);
         }
@@ -100,7 +100,8 @@ function PurchaseContent() {
                     relationship: relationship,
                     studentName: studentName || 'Unknown Student',
                     class: studentClass || 'Unknown Class',
-                    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+                    metadataSheet: searchParams.get('metadataSheet') || ''
                 }),
             });
             if (!res.ok) throw new Error('Could not initiate payment.');
@@ -114,7 +115,7 @@ function PurchaseContent() {
             setLoading(false);
         }
     };
-    
+
     const navigateToFinalConfirmation = (inv: Invoice) => {
         const params = new URLSearchParams({
             purchaseType: searchParams.get('purchaseType') || 'fee',
@@ -122,10 +123,11 @@ function PurchaseContent() {
             credits: searchParams.get('credits') || '',
             bundle: searchParams.get('bundle') || '',
             price: searchParams.get('price') || '0',
-            userPhone: phoneNumber || userPhoneFromUrl || '', 
+            userPhone: phoneNumber || userPhoneFromUrl || '',
             studentName: searchParams.get('studentName') || '',
             class: searchParams.get('class') || '',
             totalAmount: totalAmount?.toString() || '0',
+            metadataSheet: searchParams.get('metadataSheet') || '',
         });
         router.push(`/payment/confirm?${params.toString()}`);
     };
@@ -134,7 +136,7 @@ function PurchaseContent() {
         setPaymentMethod('ghana-qr');
         // If phone number is not provided from the fee check flow, ask for it.
         if (!userPhoneFromUrl) {
-            setStep(2); 
+            setStep(2);
         } else {
             handleGenerateQrCode(); // Phone number exists, proceed to generate QR
         }
@@ -142,7 +144,7 @@ function PurchaseContent() {
 
     const handleGenerateQrCode = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        
+
         if (!phoneNumber || !/^[0-9]{10}$/.test(phoneNumber)) {
             toast({ variant: 'destructive', title: 'Invalid Phone Number', description: 'Please enter a valid 10-digit phone number.' });
             return;
@@ -151,7 +153,7 @@ function PurchaseContent() {
         setLoading(true);
         const inv = await createInvoice();
         if (inv && totalAmount) {
-             try {
+            try {
                 const qrRes = await fetch('/api/generate-gh-qr', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -170,15 +172,15 @@ function PurchaseContent() {
         }
         setLoading(false);
     };
-    
+
     const handleMomoSelection = () => {
         setPaymentMethod('momo');
         // If phone number is not provided from the fee check flow, ask for it.
         if (!userPhoneFromUrl) {
-            setStep(2); 
+            setStep(2);
         } else {
-             // Phone is known, but MoMo flow requires OTP verification regardless.
-             setStep(2);
+            // Phone is known, but MoMo flow requires OTP verification regardless.
+            setStep(2);
         }
     }
 
@@ -212,7 +214,7 @@ function PurchaseContent() {
             toast({ variant: 'destructive', title: 'Verification Failed', description: result.message });
             return;
         }
-        
+
         // OTP is valid, now create invoice and proceed
         const inv = await createInvoice();
         setLoading(false);
@@ -220,10 +222,10 @@ function PurchaseContent() {
             setStep(3); // Move to payment instructions
         }
     }
-    
+
     const handleProceedToConfirmation = async () => {
         if (!invoice || totalAmount === null) return;
-        
+
         // Redirect to final confirmation page
         const params = new URLSearchParams({
             purchaseType: searchParams.get('purchaseType') || 'fee',
@@ -231,12 +233,12 @@ function PurchaseContent() {
             credits: searchParams.get('credits') || '',
             bundle: searchParams.get('bundle') || '',
             price: searchParams.get('price') || '0',
-            userPhone: phoneNumber || userPhoneFromUrl || '', 
+            userPhone: phoneNumber || userPhoneFromUrl || '',
             studentName: searchParams.get('studentName') || '',
             class: searchParams.get('class') || '',
             totalAmount: totalAmount?.toString() || '0',
         });
-        
+
         router.push(`/payment/confirm?${params.toString()}`);
     }
 
@@ -250,8 +252,8 @@ function PurchaseContent() {
             </div>
         );
     }
-    
-    const pageDescription = purchaseType === 'fee' 
+
+    const pageDescription = purchaseType === 'fee'
         ? `You are paying the fee for ${bundleName}.`
         : `You are purchasing the ${bundleName}.`;
 
@@ -276,7 +278,7 @@ function PurchaseContent() {
         switch (step) {
             case 1:
                 return (
-                     <CardContent className="space-y-4">
+                    <CardContent className="space-y-4">
                         <Button variant="outline" className="w-full h-20 text-lg" onClick={handleGhanaQrSelection} disabled={loading}>
                             {loading && paymentMethod === 'ghana-qr' ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-4 h-8 w-8" />}
                             Pay with GhanaPay QR
@@ -329,7 +331,7 @@ function PurchaseContent() {
                     </CardContent>
                 );
             case 3: // MoMo Payment Instructions
-                 return (
+                return (
                     <CardContent className="space-y-4">
                         <div>
                             <Alert>
@@ -342,7 +344,7 @@ function PurchaseContent() {
                                 <p className="text-sm text-muted-foreground">Merchant Number</p>
                                 <p className="text-2xl font-bold tracking-widest">{merchantNumber}</p>
                             </div>
-                             <Button asChild className="w-full" variant="secondary">
+                            <Button asChild className="w-full" variant="secondary">
                                 <a href={momoPaymentLink} target="_blank" rel="noopener noreferrer">
                                     Pay with MoMo Link <ExternalLink className="ml-2 h-4 w-4" />
                                 </a>
@@ -362,7 +364,7 @@ function PurchaseContent() {
                             </Card>
                         </div>
                         <Button className="w-full" onClick={handleProceedToConfirmation} disabled={loading}>
-                           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'I Have Sent The Money'}
+                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'I Have Sent The Money'}
                         </Button>
                     </CardContent>
                 );
@@ -393,20 +395,20 @@ function PurchaseContent() {
                             After paying, click the button below to finalize your transaction.
                         </p>
                         <Button className="w-full" onClick={handleProceedToConfirmation} disabled={loading || !qrPayload}>
-                           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'I Have Completed Payment'}
+                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'I Have Completed Payment'}
                         </Button>
                     </CardContent>
                 );
             default:
-                 return (
-                     <CardContent className="space-y-6">
-                         <div className="text-center">An unexpected error occurred. Please try again.</div>
-                         <Button onClick={() => setStep(1)} className="w-full">Start Over</Button>
-                     </CardContent>
-                 );
+                return (
+                    <CardContent className="space-y-6">
+                        <div className="text-center">An unexpected error occurred. Please try again.</div>
+                        <Button onClick={() => setStep(1)} className="w-full">Start Over</Button>
+                    </CardContent>
+                );
         }
     };
-    
+
     const getStepTitle = () => {
         if (step === 1) return 'Choose Payment Method';
         if (step === 2) return 'Confirm Your Number';
@@ -423,7 +425,7 @@ function PurchaseContent() {
             />
 
             <div className="max-w-lg mx-auto">
-                 <Card>
+                <Card>
                     <CardHeader className="relative">
                         {step > 1 && (
                             <Button variant="ghost" size="icon" className="absolute left-2 top-2" onClick={handleBack}>
@@ -441,11 +443,11 @@ function PurchaseContent() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span>Transaction Fee:</span>
-                                     {transactionFee !== null ? (
+                                    {transactionFee !== null ? (
                                         <span>GHS {transactionFee.toFixed(2)}</span>
-                                     ) : (
+                                    ) : (
                                         <Skeleton className="h-5 w-16" />
-                                     )}
+                                    )}
                                 </div>
                                 <Separator />
                                 <div className="flex justify-between font-bold text-base text-foreground">
@@ -459,7 +461,7 @@ function PurchaseContent() {
                             </div>
                         </CardDescription>
                     </CardHeader>
-                   
+
                     {renderStep()}
                 </Card>
             </div>
@@ -476,4 +478,3 @@ export default function PurchasePage() {
     )
 }
 
-    

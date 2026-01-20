@@ -19,8 +19,11 @@ export default function NewStudentModal({ classes }: { classes: string[] }) {
     grade: '',
     studentType: 'New' as 'New',
     gender: 'Male' as 'Male' | 'Female' | 'Other',
-    guardianName: '',
-    guardianPhone: '',
+    dateOfBirth: '',
+    fatherName: '',
+    fatherContact: '',
+    motherName: '',
+    motherContact: '',
     admissionDate: new Date().toISOString().split('T')[0], // Default to today
     notes: '',
     paymentMethod: 'Cash' as 'Cash' | 'Momo' | 'Bank',
@@ -29,22 +32,8 @@ export default function NewStudentModal({ classes }: { classes: string[] }) {
     location: '',
   })
 
-  const [phoneError, setPhoneError] = useState('')
-
-  const validatePhone = (phone: string) => {
-    // Regex for 10-13 digits
-    const phoneRegex = /^\d{10,13}$/
-    return phoneRegex.test(phone)
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!validatePhone(form.guardianPhone)) {
-      setPhoneError('Invalid phone number. Must be 10-13 digits.')
-      return
-    }
-    setPhoneError('')
 
     setIsLoading(true)
     setMessage(null)
@@ -64,8 +53,11 @@ export default function NewStudentModal({ classes }: { classes: string[] }) {
         grade: '',
         studentType: 'New',
         gender: 'Male',
-        guardianName: '',
-        guardianPhone: '',
+        dateOfBirth: '',
+        fatherName: '',
+        fatherContact: '',
+        motherName: '',
+        motherContact: '',
         admissionDate: new Date().toISOString().split('T')[0],
         notes: '',
         paymentMethod: 'Cash',
@@ -148,31 +140,55 @@ export default function NewStudentModal({ classes }: { classes: string[] }) {
                 </SelectContent>
               </Select>
             </div>
+
             <div>
-              <Label htmlFor="guardianName">Guardian Name *</Label>
+              <Label htmlFor="dateOfBirth">Date of Birth</Label>
               <Input
-                id="guardianName"
-                value={form.guardianName}
-                onChange={(e) => setForm({ ...form, guardianName: e.target.value })}
-                required
-                placeholder="Enter guardian full name"
+                id="dateOfBirth"
+                type="date"
+                value={form.dateOfBirth}
+                onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
               />
             </div>
+
             <div>
-              <Label htmlFor="guardianPhone">Guardian Phone *</Label>
+              <Label htmlFor="fatherName">Father's Name</Label>
               <Input
-                id="guardianPhone"
-                value={form.guardianPhone}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setForm({ ...form, guardianPhone: val });
-                  if (phoneError) setPhoneError('');
-                }}
-                required
-                placeholder="e.g., 233xxxxxxxxx"
-                className={phoneError ? 'border-red-500' : ''}
+                id="fatherName"
+                value={form.fatherName}
+                onChange={(e) => setForm({ ...form, fatherName: e.target.value })}
+                placeholder="Enter father's name"
               />
-              {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="fatherContact">Father's Contact</Label>
+              <Input
+                id="fatherContact"
+                value={form.fatherContact}
+                onChange={(e) => setForm({ ...form, fatherContact: e.target.value })}
+                placeholder="e.g., 233xxxxxxxxx"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="motherName">Mother's Name</Label>
+              <Input
+                id="motherName"
+                value={form.motherName}
+                onChange={(e) => setForm({ ...form, motherName: e.target.value })}
+                placeholder="Enter mother's name"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="motherContact">Mother's Contact</Label>
+              <Input
+                id="motherContact"
+                value={form.motherContact}
+                onChange={(e) => setForm({ ...form, motherContact: e.target.value })}
+                placeholder="e.g., 233xxxxxxxxx"
+              />
             </div>
 
             <div>

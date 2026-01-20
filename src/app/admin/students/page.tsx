@@ -1,11 +1,12 @@
 
 import { getAllStudents } from "@/lib/data";
+import { OLD_METADATA } from "@/lib/definitions";
 import StudentsTable from "@/components/admin/students-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, User, UserPlus } from "lucide-react";
 
 export default async function AdminStudentsPage() {
-  const students = await getAllStudents();
+  const students = await getAllStudents(OLD_METADATA);
 
   // Calculate student statistics
   const totalStudents = students.length;
@@ -81,7 +82,7 @@ export default async function AdminStudentsPage() {
 
       {/* Students Table */}
       <div className="grid flex-1 items-start gap-4 md:gap-8">
-        <StudentsTable students={students} />
+        <StudentsTable students={students} metadataSheet={OLD_METADATA} />
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getAllStudents, getBooksConfig } from "@/lib/data";
+import { NEW_METADATA, OLD_METADATA } from "@/lib/definitions";
 import { cn } from "@/lib/utils";
 import BooksStatsCard from "@/components/admin/books/books-stats-card";
 import BooksPaymentStatusChart from "@/components/admin/books/books-payment-status-chart";
@@ -15,7 +16,11 @@ import ClassBooksPriceTable from "@/components/admin/books/class-books-price-tab
 import StudentBooksTable from "@/components/admin/books/student-books-table";
 
 export default async function BooksDashboard() {
-  const students = await getAllStudents();
+  const [newStudentsMeta, oldStudentsMeta] = await Promise.all([
+    getAllStudents(NEW_METADATA),
+    getAllStudents(OLD_METADATA)
+  ]);
+  const students = [...newStudentsMeta, ...oldStudentsMeta];
   const booksConfig = await getBooksConfig();
 
   // Class order for consistent display

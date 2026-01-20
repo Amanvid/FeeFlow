@@ -9,16 +9,17 @@ const googleSheets = new GoogleSheetsService();
 
 export async function POST(req: Request) {
   try {
-    const { 
-      amount, 
-      description, 
+    const {
+      amount,
+      description,
       reference,
       guardianName,
       guardianPhone,
       relationship,
       studentName,
       class: studentClass,
-      dueDate
+      dueDate,
+      metadataSheet
     } = await req.json();
 
     if (!amount || !description || !reference) {
@@ -48,14 +49,15 @@ export async function POST(req: Request) {
       new Date().toLocaleDateString('en-GB'), // Timestamp (column 9)
       'FALSE', // Paid status (column 10)
       '', // Payment Date (column 11)
-      '' // Payment Reference (column 12)
+      '', // Payment Reference (column 12)
+      metadataSheet || 'Cop-Metadata' // Metadata Source (column 13)
     ]]);
 
     if (!result.success) {
       console.error('Failed to append to Google Sheets:', result.message);
-      return NextResponse.json({ 
-        error: 'Failed to create invoice', 
-        details: result.message 
+      return NextResponse.json({
+        error: 'Failed to create invoice',
+        details: result.message
       }, { status: 500 });
     }
 

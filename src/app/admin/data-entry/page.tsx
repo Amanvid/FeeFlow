@@ -55,7 +55,7 @@ export default function DataEntryPage() {
     schoolFeesAmount: 0,
     initialAmountPaid: 0,
   });
-  
+
   const [paymentForm, setPaymentForm] = useState<PaymentFormData>({
     studentId: '',
     studentName: '',
@@ -64,13 +64,13 @@ export default function DataEntryPage() {
     amount: 0,
     paymentMethod: 'Cash',
   });
-  
+
   const [previousPayments, setPreviousPayments] = useState<PreviousPayments>({
     initialAmountPaid: 0,
     payment: 0,
     booksFeesPayment: 0,
   });
-  
+
   const [studentMessage, setStudentMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [paymentMessage, setPaymentMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -85,7 +85,7 @@ export default function DataEntryPage() {
       try {
         const response = await fetch('/api/classes');
         const result = await response.json();
-        
+
         if (result.success && result.classes) {
           setClasses(result.classes);
         } else {
@@ -125,10 +125,10 @@ export default function DataEntryPage() {
     try {
       const response = await fetch('/api/students');
       const result = await response.json();
-      
+
       if (result.success && result.students) {
         // Filter students by the selected class
-        const classStudents = result.students.filter((s: Student) => 
+        const classStudents = result.students.filter((s: Student) =>
           s.class.toLowerCase() === selectedClass.toLowerCase()
         );
         setStudents(classStudents);
@@ -149,7 +149,7 @@ export default function DataEntryPage() {
     try {
       const response = await fetch(`/api/students/${studentId}`);
       const result = await response.json();
-      
+
       if (result.success && result.student) {
         setPreviousPayments({
           initialAmountPaid: result.student.schoolFeesPaid || 0,
@@ -224,7 +224,10 @@ export default function DataEntryPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(paymentForm),
+        body: JSON.stringify({
+          ...paymentForm,
+          metadataSheet: students.find(s => s.id === paymentForm.studentId)?.metadataSheet
+        }),
       });
 
       const result = await response.json();
@@ -441,8 +444,8 @@ export default function DataEntryPage() {
                   <Select
                     value={paymentForm.studentClass}
                     onValueChange={(value) => {
-                      setPaymentForm({ 
-                        ...paymentForm, 
+                      setPaymentForm({
+                        ...paymentForm,
                         studentClass: value,
                         studentId: '',
                         studentName: ''
@@ -477,8 +480,8 @@ export default function DataEntryPage() {
                     onValueChange={(value) => {
                       const selectedStudent = students.find(s => s.id === value);
                       if (selectedStudent) {
-                        setPaymentForm({ 
-                          ...paymentForm, 
+                        setPaymentForm({
+                          ...paymentForm,
                           studentId: value,
                           studentName: selectedStudent.studentName
                         });
@@ -511,47 +514,47 @@ export default function DataEntryPage() {
                 </div>
 
                 {/* Previous Payment Display */}
-              {paymentForm.studentId && (
-                <div className="space-y-2">
-                  <Label>Previous Payments</Label>
-                  <div className="grid grid-cols-3 gap-2 p-3 bg-gray-50 rounded-md">
-                    <div className="text-center">
-                      <div className="text-sm text-gray-600">Initial Amount</div>
-                      <div className="text-lg font-semibold text-green-600">GH₵{previousPayments.initialAmountPaid.toFixed(2)}</div>
+                {paymentForm.studentId && (
+                  <div className="space-y-2">
+                    <Label>Previous Payments</Label>
+                    <div className="grid grid-cols-3 gap-2 p-3 bg-gray-50 rounded-md">
+                      <div className="text-center">
+                        <div className="text-sm text-gray-600">Initial Amount</div>
+                        <div className="text-lg font-semibold text-green-600">GH₵{previousPayments.initialAmountPaid.toFixed(2)}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm text-gray-600">Additional Payments</div>
+                        <div className="text-lg font-semibold text-blue-600">GH₵{previousPayments.payment.toFixed(2)}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm text-gray-600">Books Fees</div>
+                        <div className="text-lg font-semibold text-purple-600">GH₵{previousPayments.booksFeesPayment.toFixed(2)}</div>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-sm text-gray-600">Additional Payments</div>
-                      <div className="text-lg font-semibold text-blue-600">GH₵{previousPayments.payment.toFixed(2)}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm text-gray-600">Books Fees</div>
-                      <div className="text-lg font-semibold text-purple-600">GH₵{previousPayments.booksFeesPayment.toFixed(2)}</div>
-                    </div>
-                  </div>
-                  {/* Payment Target Message */}
-                  <div className="p-2 bg-blue-50 rounded-md text-sm">
-                    {paymentForm.paymentType === 'School Fees' ? (
-                      previousPayments.initialAmountPaid === 0 ? (
-                        <span className="text-blue-700">This payment will be recorded as <strong>Initial Amount Paid</strong></span>
+                    {/* Payment Target Message */}
+                    <div className="p-2 bg-blue-50 rounded-md text-sm">
+                      {paymentForm.paymentType === 'School Fees' ? (
+                        previousPayments.initialAmountPaid === 0 ? (
+                          <span className="text-blue-700">This payment will be recorded as <strong>Initial Amount Paid</strong></span>
+                        ) : (
+                          <span className="text-blue-700">This payment will be recorded as <strong>Additional Payment</strong></span>
+                        )
                       ) : (
-                        <span className="text-blue-700">This payment will be recorded as <strong>Additional Payment</strong></span>
-                      )
-                    ) : (
-                      <span className="text-purple-700">This payment will be recorded as <strong>Books Fees Payment</strong></span>
-                    )}
+                        <span className="text-purple-700">This payment will be recorded as <strong>Books Fees Payment</strong></span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
                 <div>
                   <Label htmlFor="paymentType">Payment Type</Label>
                   <Select
-                  value={paymentForm.paymentType}
-                  onValueChange={(value: 'School Fees' | 'Books Fees') => {
-                    setPaymentForm({ ...paymentForm, paymentType: value });
-                    // Payment target message will automatically update due to re-render
-                  }}
-                >
+                    value={paymentForm.paymentType}
+                    onValueChange={(value: 'School Fees' | 'Books Fees') => {
+                      setPaymentForm({ ...paymentForm, paymentType: value });
+                      // Payment target message will automatically update due to re-render
+                    }}
+                  >
                     <SelectTrigger id="paymentType">
                       <SelectValue />
                     </SelectTrigger>
